@@ -32,12 +32,22 @@ export default function Header() {
     }
   }, []);
 
+  const applyTheme = (newTheme: "dark" | "light") => {
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    document.documentElement.classList.toggle("light", newTheme === "light");
+  };
+
   const toggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    localStorage.setItem("theme", nextTheme);
-    document.documentElement.classList.toggle("dark", nextTheme === "dark");
-    document.documentElement.classList.toggle("light", nextTheme === "light");
+    if (typeof document !== "undefined" && "startViewTransition" in document) {
+      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
+        applyTheme(nextTheme);
+      });
+    } else {
+      applyTheme(nextTheme);
+    }
   };
 
   return (
@@ -46,7 +56,7 @@ export default function Header() {
       initial={{ y: -30, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className="fixed top-0 left-0 right-0 z-50 pointer-events-none"
+      className="fixed top-0 left-0 right-0 z-10 pointer-events-none"
     >
       {/* Ultra Large Pure Optical Gradual Fading Blur Overlay */}
       <div className="absolute top-0 left-0 right-0 h-56 sm:h-72 pointer-events-none overflow-hidden">
@@ -66,25 +76,25 @@ export default function Header() {
       </div>
 
       <div className="relative z-10 w-full px-8 md:px-12 py-6 flex items-center justify-between pointer-events-auto">
-        <nav className="hidden md:flex items-center gap-5 font-serif">
+        <nav className="hidden md:flex items-center gap-5 font-narrow">
           {navItems.map((item) => (
             <Link
               key={item.name}
               href={item.href}
-              className="text-base text-neutral-400 hover:text-white hover:scale-105 active:scale-95 transition-all duration-200 inline-block origin-center capitalize"
+              className="text-base text-neutral-400 hover:text-white dark:hover:text-white light:hover:text-black hover:scale-105 active:scale-95 transition-all duration-200 inline-block origin-center lowercase"
             >
               {item.name}
             </Link>
           ))}
         </nav>
 
-        <div className="flex items-center gap-4 ml-auto font-serif">
+        <div className="flex items-center gap-4 ml-auto font-narrow">
           <div className="hidden md:block">
             <Link
               href="#footer"
-              className="px-4 py-1.5 text-sm text-black bg-white dark:text-black dark:bg-white light:text-white light:bg-black rounded-full hover:opacity-80 transition-opacity capitalize"
+              className="px-4 py-1.5 text-sm rounded-full transition-opacity lowercase bg-white text-black dark:bg-white dark:text-black light:bg-neutral-900 light:text-white hover:opacity-80"
             >
-              Contact
+              contact
             </Link>
           </div>
 
@@ -158,13 +168,13 @@ export default function Header() {
       </div>
 
       {isOpen && (
-        <div className="md:hidden relative z-10 font-serif bg-black/95 dark:bg-black/95 light:bg-white/95 border-b border-neutral-800 px-8 py-4 flex flex-col gap-4 pointer-events-auto">
+        <div className="md:hidden relative z-10 font-narrow bg-black/95 dark:bg-black/95 light:bg-white/95 border-b border-neutral-800 px-8 py-4 flex flex-col gap-4 pointer-events-auto">
           {navItems.map((item) => (
             <Link
               key={item.name}
               href={item.href}
               onClick={() => setIsOpen(false)}
-              className="text-base text-neutral-400 hover:text-white hover:translate-x-1 transition-all duration-200 text-left capitalize"
+              className="text-base text-neutral-400 hover:text-white hover:translate-x-1 transition-all duration-200 text-left lowercase"
             >
               {item.name}
             </Link>
@@ -172,9 +182,9 @@ export default function Header() {
           <Link
             href="#footer"
             onClick={() => setIsOpen(false)}
-            className="w-full text-center px-4 py-2 text-sm text-black bg-white dark:text-black dark:bg-white light:text-white light:bg-black rounded-full transition-opacity capitalize"
+            className="w-full text-center px-4 py-2 text-sm text-black bg-white dark:text-black dark:bg-white light:text-white light:bg-black rounded-full transition-opacity lowercase"
           >
-            Contact
+            contact
           </Link>
         </div>
       )}

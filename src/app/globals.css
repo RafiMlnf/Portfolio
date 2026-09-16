@@ -9,16 +9,178 @@
 :root {
   --background: #000000;
   --foreground: #f5f5f5;
+  color-scheme: dark;
 }
 
 html.light {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111111;
+  color-scheme: light;
+}
+
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
 }
+
+
+/* Light mode text color adaptation for fixed neutral classes */
+html.light .text-neutral-100 {
+  color: #111111 !important;
+}
+
+html.light .text-neutral-200 {
+  color: #222222 !important;
+}
+
+html.light .text-neutral-400 {
+  color: #555555 !important;
+}
+
+html.light .text-neutral-500 {
+  color: #666666 !important;
+}
+
+html.light .border-neutral-800,
+html.light .border-neutral-800\/80 {
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+
+/* Smooth Inverted Fade Burn Theme Transition dengan Frame Rounded Siku Nyata */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+  transform-origin: center center;
+}
+
+::view-transition-image-pair(root) {
+  isolation: isolate;
+}
+
+/* Frame overlay langsung di dalam View Transition */
+::view-transition-old(root) {
+  z-index: 1;
+  animation: smooth-fade-burn-out 0.65s ease-in-out forwards;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+  mix-blend-mode: difference;
+  animation: smooth-inverted-fade-in 0.65s ease-in-out forwards;
+}
+
+@keyframes smooth-inverted-fade-in {
+  from {
+    opacity: 0;
+    filter: invert(1) contrast(300%) brightness(130%);
+    clip-path: inset(16px round 24px);
+    transform: scale(0.985);
+  }
+  50% {
+    opacity: 0.95;
+    filter: invert(0.6) contrast(220%) brightness(115%);
+    clip-path: inset(16px round 24px);
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    filter: invert(0) contrast(100%) brightness(100%);
+    clip-path: inset(0px round 0px);
+    transform: scale(1);
+  }
+}
+
+@keyframes smooth-fade-burn-out {
+  from {
+    opacity: 1;
+    filter: brightness(100%) contrast(100%);
+    clip-path: inset(0px round 0px);
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    filter: brightness(180%) contrast(180%) saturate(140%);
+    clip-path: inset(16px round 24px);
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 0;
+    filter: brightness(240%) contrast(220%) saturate(160%);
+    clip-path: inset(16px round 24px);
+    transform: scale(0.985);
+  }
+}
+
+/* Retro Camera / CRT TV Micro Jitter & Lens Bleed Effect */
+.shaky-retro-text {
+  display: inline-block;
+  /* Lembutkan ketajaman digital modern font */
+  filter: blur(0.45px) opacity(0.92);
+  /* Chromatic aberration / phosphor bleeding khas layar TV tabung & kamera analog */
+  text-shadow:
+    -0.5px 0 rgba(255, 60, 60, 0.4),
+    0.5px 0 rgba(60, 180, 255, 0.4),
+    0 0 1px rgba(255, 255, 255, 0.3);
+  animation: retro-jitter 0.12s infinite linear;
+  will-change: transform, filter;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.light .shaky-retro-text {
+  filter: blur(0.45px) opacity(0.88);
+  text-shadow:
+    -0.5px 0 rgba(220, 40, 40, 0.35),
+    0.5px 0 rgba(30, 100, 220, 0.35),
+    0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes retro-jitter {
+  0% {
+    transform: translate(0px, 0px);
+  }
+  20% {
+    transform: translate(-0.5px, 0.35px);
+  }
+  40% {
+    transform: translate(0.45px, -0.3px);
+  }
+  60% {
+    transform: translate(-0.4px, -0.45px);
+  }
+  80% {
+    transform: translate(0.4px, 0.4px);
+  }
+  100% {
+    transform: translate(0px, 0px);
+  }
+}
+
+
+
+
+
+

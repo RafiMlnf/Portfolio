@@ -18,6 +18,7 @@ interface PrismProps {
   hoverStrength?: number;
   inertia?: number;
   bloom?: number;
+  bulge?: number;
   suspendWhenOffscreen?: boolean;
   timeScale?: number;
   lightMode?: boolean;
@@ -37,6 +38,7 @@ const Prism = ({
   hoverStrength = 2,
   inertia = 0.05,
   bloom = 1,
+  bulge = 0.6,
   suspendWhenOffscreen = false,
   timeScale = 0.5,
   lightMode = false,
@@ -118,6 +120,7 @@ const Prism = ({
       uniform float uPxScale;
       uniform float uTimeScale;
       uniform float uLightMode;
+      uniform float uBulge;
 
       vec4 tanh4(vec4 x){
         vec4 e2x = exp(2.0*x);
@@ -162,6 +165,13 @@ const Prism = ({
 
       void main(){
         vec2 f = (gl_FragCoord.xy - 0.5 * iResolution.xy - uOffsetPx) * uPxScale;
+
+        // Optical Lens Bulge Effect
+        if (abs(uBulge) > 0.001) {
+          float r = length(f);
+          float factor = 1.0 + uBulge * 0.12 * (r * r);
+          f *= factor;
+        }
 
         float z = 5.0;
         float d = 0.0;
@@ -248,6 +258,7 @@ const Prism = ({
         },
         uTimeScale: { value: TS },
         uLightMode: { value: lightMode ? 1.0 : 0.0 },
+        uBulge: { value: bulge },
       },
     });
     const mesh = new Mesh(gl, { geometry, program });

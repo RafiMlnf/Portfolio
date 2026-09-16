@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   description: "Personal Portfolio",
 };
 
+import SmoothScroll from "@/components/SmoothScroll";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,8 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${ebGaramond.variable} ${poppins.variable} dark`} suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen">
+        <SmoothScroll />
         {children}
       </body>
     </html>
   );
 }
+

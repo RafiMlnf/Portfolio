@@ -135,27 +135,29 @@ html.light .border-neutral-800\/80 {
   }
 }
 
-/* Retro Camera / CRT TV Micro Jitter & Lens Bleed Effect */
+/* Low-Bitrate / Compressed Analog Video Artifact Effect */
 .shaky-retro-text {
   display: inline-block;
-  /* Lembutkan ketajaman digital modern font */
-  filter: blur(0.45px) opacity(0.92);
-  /* Chromatic aberration / phosphor bleeding khas layar TV tabung & kamera analog */
+  /* Low-bitrate video chroma sub-sampling & lossy compression artifact:
+     Subtle horizontal smudge, high contrast edge quantization (anti-aliasing degradation) */
+  filter: blur(0.75px) contrast(1.6) brightness(0.95);
+  /* Hard chroma displacement without glow/bloom */
   text-shadow:
-    -0.5px 0 rgba(255, 60, 60, 0.4),
-    0.5px 0 rgba(60, 180, 255, 0.4),
-    0 0 1px rgba(255, 255, 255, 0.3);
-  animation: retro-jitter 0.12s infinite linear;
+    -1px 0 rgba(255, 0, 50, 0.7),
+    1px 0 rgba(0, 220, 255, 0.7),
+    0 0.5px rgba(0, 0, 0, 0.8);
+  animation: retro-jitter 0.12s infinite steps(2);
   will-change: transform, filter;
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: none; /* Matikan font smoothing agar terasa raw/lossy */
+  font-smooth: never;
 }
 
 html.light .shaky-retro-text {
-  filter: blur(0.45px) opacity(0.88);
+  filter: blur(0.65px) contrast(1.5) brightness(0.95);
   text-shadow:
-    -0.5px 0 rgba(220, 40, 40, 0.35),
-    0.5px 0 rgba(30, 100, 220, 0.35),
-    0 0 1px rgba(0, 0, 0, 0.2);
+    -1px 0 rgba(220, 0, 40, 0.5),
+    1px 0 rgba(0, 150, 220, 0.5);
+  -webkit-font-smoothing: none;
 }
 
 @keyframes retro-jitter {
@@ -177,6 +179,189 @@ html.light .shaky-retro-text {
   100% {
     transform: translate(0px, 0px);
   }
+}
+
+/* Flicker & Green Block Highlight Animation */
+.flicker-container {
+  display: inline;
+}
+
+.flicker-word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.flicker-char {
+  display: inline-block;
+  position: relative;
+  border-radius: 1px;
+  transition: color 0.1s ease;
+  animation: char-flicker-highlight var(--flicker-duration, 6s) infinite steps(1) var(--flicker-delay, 0s);
+}
+
+@keyframes char-flicker-highlight {
+  0%, 100% {
+    background-color: transparent;
+    color: inherit;
+    opacity: 1;
+  }
+  2% {
+    opacity: 0.3;
+  }
+  3% {
+    opacity: 1;
+  }
+  12% {
+    background-color: #0ed600;
+    color: #000000;
+  }
+  13.5% {
+    background-color: transparent;
+    color: inherit;
+  }
+  14% {
+    background-color: #0ed600;
+    color: #000000;
+  }
+  15% {
+    background-color: transparent;
+    color: inherit;
+  }
+  42% {
+    opacity: 0.5;
+  }
+  43% {
+    opacity: 1;
+  }
+  64% {
+    background-color: #0ed600;
+    color: #000000;
+  }
+  65.2% {
+    background-color: transparent;
+    color: inherit;
+  }
+  86% {
+    opacity: 0.4;
+  }
+  87% {
+    opacity: 1;
+  }
+}
+
+/* Star Periodic Appearance with Invert Flash & Left-to-Right Wave */
+.star-flicker-item {
+  opacity: 0;
+  pointer-events: none;
+  animation: star-intermittent-invert-wave 4.5s infinite steps(1);
+}
+
+@keyframes star-intermittent-invert-wave {
+  /* 0% s/d 42%: Periode jeda hilang sebentar */
+  0%, 42%, 100% {
+    opacity: 0;
+    filter: invert(0) brightness(1);
+    pointer-events: none;
+  }
+
+  /* 43%: Hentakan masuk dengan Invert Color Flash */
+  43% {
+    opacity: 1;
+    filter: invert(1) brightness(1.6) contrast(1.4);
+    pointer-events: auto;
+  }
+
+  /* 45%: Transisi warna normal */
+  45% {
+    opacity: 1;
+    filter: invert(0) brightness(1);
+  }
+
+  /* 47%: Micro invert glitch flicker */
+  47% {
+    opacity: 0.85;
+    filter: invert(1) brightness(1.4);
+  }
+
+  /* 49%: Normal solid */
+  49% {
+    opacity: 1;
+    filter: invert(0) brightness(1);
+  }
+
+  /* 54%: Sub-pulse flicker drop */
+  54% {
+    opacity: 0.3;
+    filter: invert(0) brightness(0.7);
+  }
+
+  /* 56%: Solid normal */
+  56% {
+    opacity: 1;
+    filter: invert(0) brightness(1);
+  }
+
+  /* 62% s/d 84%: Tampil jelas dan stabil */
+  62%, 84% {
+    opacity: 1;
+    filter: invert(0) brightness(1);
+    pointer-events: auto;
+  }
+
+  /* 86%: Flickering sebelum menghilang */
+  86% {
+    opacity: 0.25;
+    filter: invert(1);
+  }
+
+  /* 88%: Menghilang */
+  88% {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* Dither Noise Background & Dark Grey to Solid Black Gradient (Horizontal: Left to Right) */
+.bg-dither-dark {
+  background: linear-gradient(90deg, #222222 0%, #151515 35%, #0a0a0a 65%, #000000 100%);
+  position: relative;
+}
+
+html.light .bg-dither-dark {
+  background: linear-gradient(90deg, #d8d8d8 0%, #bebebe 35%, #a0a0a0 65%, #111111 100%);
+}
+
+.dither-pattern {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 0);
+  background-size: 3px 3px;
+  mask-image: linear-gradient(90deg, black, transparent 95%);
+  -webkit-mask-image: linear-gradient(90deg, black, transparent 95%);
+}
+
+/* Double Stroked Name Typography: Stroke 1 Putih, Stroke 2 Biru (#0000bd) */
+.name-double-stroke {
+  text-shadow:
+    /* Stroke 1: Putih tegas mengelilingi huruf */
+    -1.5px -1.5px 0 #ffffff,
+     1.5px -1.5px 0 #ffffff,
+    -1.5px  1.5px 0 #ffffff,
+     1.5px  1.5px 0 #ffffff,
+    -2px 0 0 #ffffff,
+     2px 0 0 #ffffff,
+     0 -2px 0 #ffffff,
+     0  2px 0 #ffffff,
+    /* Stroke 2: Biru (#0000bd) mengelilingi stroke putih */
+    -3.5px -3.5px 0 #0000bd,
+     3.5px -3.5px 0 #0000bd,
+    -3.5px  3.5px 0 #0000bd,
+     3.5px  3.5px 0 #0000bd,
+    -4px 0 0 #0000bd,
+     4px 0 0 #0000bd,
+     0 -4px 0 #0000bd,
+     0  4px 0 #0000bd;
 }
 
 

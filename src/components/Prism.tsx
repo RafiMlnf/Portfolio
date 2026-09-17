@@ -382,19 +382,19 @@ const Prism = ({
         const maxYaw = 0.6 * HOVSTR;
         targetYaw = (pointer.inside ? -pointer.x : 0) * maxYaw;
         targetPitch = (pointer.inside ? pointer.y : 0) * maxPitch;
-        const prevYaw = yaw;
-        const prevPitch = pitch;
-        const prevRoll = roll;
-        yaw = lerp(prevYaw, targetYaw, INERT);
-        pitch = lerp(prevPitch, targetPitch, INERT);
-        roll = lerp(prevRoll, 0, 0.1);
-        program.uniforms.uRot.value = setMat3FromEuler(yaw, pitch, roll, rotBuf);
+        
+        // Continuous organic random tumbling
+        const tScaled = time * TS;
+        const autoYaw = tScaled * wY;
+        const autoPitch = Math.sin(tScaled * wX + phX) * 0.45;
+        const autoRoll = Math.sin(tScaled * wZ + phZ) * 0.4;
 
-        if (NOISE_IS_ZERO) {
-          const settled =
-            Math.abs(yaw - targetYaw) < 1e-4 && Math.abs(pitch - targetPitch) < 1e-4 && Math.abs(roll) < 1e-4;
-          if (settled) continueRAF = false;
-        }
+        yaw = lerp(yaw, targetYaw, INERT);
+        pitch = lerp(pitch, targetPitch, INERT);
+        roll = lerp(roll, 0, 0.1);
+
+        // Combined rotation: continuous random tumble + mouse hover tilt
+        program.uniforms.uRot.value = setMat3FromEuler(yaw + autoYaw, pitch + autoPitch, roll + autoRoll, rotBuf);
       } else if (animationType === "3drotate") {
         const tScaled = time * TS;
         yaw = tScaled * wY;

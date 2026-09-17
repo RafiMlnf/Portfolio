@@ -14,7 +14,6 @@ const navItems = [
   { name: "Experience", href: "#experiences" },
   { name: "Skills", href: "#skills" },
   { name: "Projects", href: "#projects" },
-  { name: "Peripherals", href: "#peripherals" },
 ];
 
 export default function Header() {
@@ -56,15 +55,15 @@ export default function Header() {
       initial={{ y: -30, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className="fixed top-0 left-0 right-0 z-10 pointer-events-none"
+      className="fixed top-0 left-0 right-0 z-50 pointer-events-none"
     >
-      {/* Ultra Large Pure Optical Gradual Fading Blur Overlay */}
-      <div className="absolute top-0 left-0 right-0 h-56 sm:h-72 pointer-events-none overflow-hidden">
-        {/* Pure optical backdrop blur - without colored background tints */}
-        <div className="absolute inset-0 backdrop-blur-2xl [mask-image:linear-gradient(to_bottom,black_0%,black_25%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,black_25%,transparent_100%)]" />
-        <div className="absolute inset-0 backdrop-blur-lg [mask-image:linear-gradient(to_bottom,black_10%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_10%,transparent_100%)]" />
+      {/* Compact Optical Gradual Fading Blur Overlay */}
+      <div className="absolute top-0 left-0 right-0 h-24 sm:h-28 pointer-events-none overflow-hidden">
+        {/* Pure optical backdrop blur with tight compact falloff */}
+        <div className="absolute inset-0 backdrop-blur-xl [mask-image:linear-gradient(to_bottom,black_0%,black_35%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,black_35%,transparent_100%)]" />
+        <div className="absolute inset-0 backdrop-blur-md [mask-image:linear-gradient(to_bottom,black_15%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_15%,transparent_100%)]" />
         {/* Film grain noise overlay */}
-        <div className="absolute inset-0 opacity-25 [mask-image:linear-gradient(to_bottom,black_0%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_100%)]">
+        <div className="absolute inset-0 opacity-20 [mask-image:linear-gradient(to_bottom,black_0%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_100%)]">
           <Noise
             patternSize={250}
             patternScaleX={1}

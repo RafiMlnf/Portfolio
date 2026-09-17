@@ -135,29 +135,27 @@ html.light .border-neutral-800\/80 {
   }
 }
 
-/* Low-Bitrate / Compressed Analog Video Artifact Effect */
+/* Retro Camera / CRT TV Micro Jitter & Lens Bleed Effect */
 .shaky-retro-text {
   display: inline-block;
-  /* Low-bitrate video chroma sub-sampling & lossy compression artifact:
-     Subtle horizontal smudge, high contrast edge quantization (anti-aliasing degradation) */
-  filter: blur(0.75px) contrast(1.6) brightness(0.95);
-  /* Hard chroma displacement without glow/bloom */
+  /* Lembutkan ketajaman digital modern font */
+  filter: blur(0.45px) opacity(0.92);
+  /* Chromatic aberration / phosphor bleeding khas layar TV tabung & kamera analog */
   text-shadow:
-    -1px 0 rgba(255, 0, 50, 0.7),
-    1px 0 rgba(0, 220, 255, 0.7),
-    0 0.5px rgba(0, 0, 0, 0.8);
-  animation: retro-jitter 0.12s infinite steps(2);
+    -0.5px 0 rgba(255, 60, 60, 0.4),
+    0.5px 0 rgba(60, 180, 255, 0.4),
+    0 0 1px rgba(255, 255, 255, 0.3);
+  animation: retro-jitter 0.12s infinite linear;
   will-change: transform, filter;
-  -webkit-font-smoothing: none; /* Matikan font smoothing agar terasa raw/lossy */
-  font-smooth: never;
+  -webkit-font-smoothing: antialiased;
 }
 
 html.light .shaky-retro-text {
-  filter: blur(0.65px) contrast(1.5) brightness(0.95);
+  filter: blur(0.45px) opacity(0.88);
   text-shadow:
-    -1px 0 rgba(220, 0, 40, 0.5),
-    1px 0 rgba(0, 150, 220, 0.5);
-  -webkit-font-smoothing: none;
+    -0.5px 0 rgba(220, 40, 40, 0.35),
+    0.5px 0 rgba(30, 100, 220, 0.35),
+    0 0 1px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes retro-jitter {
@@ -181,9 +179,9 @@ html.light .shaky-retro-text {
   }
 }
 
-/* Flicker & Green Block Highlight Animation */
+/* Flicker & Green Block Highlight Animation with Shake */
 .flicker-container {
-  display: inline;
+  display: inline-block;
 }
 
 .flicker-word {
@@ -195,8 +193,10 @@ html.light .shaky-retro-text {
   display: inline-block;
   position: relative;
   border-radius: 1px;
-  transition: color 0.1s ease;
-  animation: char-flicker-highlight var(--flicker-duration, 6s) infinite steps(1) var(--flicker-delay, 0s);
+  will-change: transform, color, background-color;
+  animation:
+    char-flicker-highlight var(--flicker-duration, 6s) infinite steps(1) var(--flicker-delay, 0s),
+    retro-jitter 0.12s infinite linear;
 }
 
 @keyframes char-flicker-highlight {
@@ -321,48 +321,49 @@ html.light .shaky-retro-text {
   }
 }
 
-/* Dither Noise Background & Dark Grey to Solid Black Gradient (Horizontal: Left to Right) */
-.bg-dither-dark {
-  background: linear-gradient(90deg, #222222 0%, #151515 35%, #0a0a0a 65%, #000000 100%);
-  position: relative;
-}
-
-html.light .bg-dither-dark {
-  background: linear-gradient(90deg, #d8d8d8 0%, #bebebe 35%, #a0a0a0 65%, #111111 100%);
-}
-
-.dither-pattern {
+/* HTML5 Ambient Video in Prism Canvas */
+.prism-video-ambient {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   pointer-events: none;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 0);
-  background-size: 3px 3px;
-  mask-image: linear-gradient(90deg, black, transparent 95%);
-  -webkit-mask-image: linear-gradient(90deg, black, transparent 95%);
 }
 
-/* Double Stroked Name Typography: Stroke 1 Putih, Stroke 2 Biru (#0000bd) */
-.name-double-stroke {
-  text-shadow:
-    /* Stroke 1: Putih tegas mengelilingi huruf */
-    -1.5px -1.5px 0 #ffffff,
-     1.5px -1.5px 0 #ffffff,
-    -1.5px  1.5px 0 #ffffff,
-     1.5px  1.5px 0 #ffffff,
-    -2px 0 0 #ffffff,
-     2px 0 0 #ffffff,
-     0 -2px 0 #ffffff,
-     0  2px 0 #ffffff,
-    /* Stroke 2: Biru (#0000bd) mengelilingi stroke putih */
-    -3.5px -3.5px 0 #0000bd,
-     3.5px -3.5px 0 #0000bd,
-    -3.5px  3.5px 0 #0000bd,
-     3.5px  3.5px 0 #0000bd,
-    -4px 0 0 #0000bd,
-     4px 0 0 #0000bd,
-     0 -4px 0 #0000bd,
-     0  4px 0 #0000bd;
+/* Native <video> element: stretched to fill, centered, animated drift */
+.prism-video-el {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  filter: contrast(125%) brightness(90%) blur(0.4px);
+  animation: ambient-video-drift 18s ease-in-out infinite alternate;
+  will-change: transform, filter;
 }
+
+/* Smooth ambient breathing & floating drift animation */
+@keyframes ambient-video-drift {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    filter: brightness(95%) contrast(120%) blur(0.3px);
+  }
+  50% {
+    transform: translate(-49.2%, -50.8%) scale(1.05);
+    filter: brightness(110%) contrast(135%) blur(0.5px);
+  }
+  100% {
+    transform: translate(-50.8%, -49.2%) scale(1.08);
+    filter: brightness(100%) contrast(125%) blur(0.4px);
+  }
+}
+
+
+
 
 
 

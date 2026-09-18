@@ -10,16 +10,15 @@ import OptionWheel from "@/components/OptionWheel";
 interface SongData {
   title: string;
   videoSrc?: string;   // path ke file lokal di /public/videos/
-  startSeconds?: number;
 }
 
 const songDataList: SongData[] = [
-  { title: "Arteri",  videoSrc: "/videos/arteri.mp4",  startSeconds: 231 },
-  { title: "Gravits", videoSrc: "/videos/gravits.mp4", startSeconds: 188 },
-  { title: "Tek It" },
-  { title: "Telenovia" },
+  { title: "Arteri",  videoSrc: "/videos/arteri.mp4" },
+  { title: "Gravits", videoSrc: "/videos/gravits.mp4" },
+  { title: "Tek It", videoSrc: "/videos/tekit.mp4" },
+  { title: "Telenovia", videoSrc: "/videos/telenovia.mp4" },
   { title: "Egosentris" },
-  { title: "Jigsaw Falling Into Place" },
+  { title: "Jigsaw Falling Into Place", videoSrc: "/videos/jigsaw.mp4" },
   { title: "La Novela" },
 ];
 
@@ -33,119 +32,148 @@ export default function Hero() {
   const [isWheelOpen, setIsWheelOpen] = useState(false);
   const [selectedSongIdx, setSelectedSongIdx] = useState(0);
   const [isVideoSwitching, setIsVideoSwitching] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
 
   const closeTimerRef     = useRef<NodeJS.Timeout | null>(null);
   const videoFadeTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const fadeRafRef        = useRef<number | null>(null);
+  const fadeTimerRef      = useRef<NodeJS.Timeout | null>(null);
 
-  // HTML5 video & Web Audio
-  const videoRef      = useRef<HTMLVideoElement | null>(null);
-  const audioCtxRef   = useRef<AudioContext | null>(null);
-  const gainRef       = useRef<GainNode | null>(null);
-  const sourceRef     = useRef<MediaElementAudioSourceNode | null>(null);
+  // Single video element + Web Audio
+  const videoRef       = useRef<HTMLVideoElement | null>(null);
+  const audioCtxRef    = useRef<AudioContext | null>(null);
+  const gainRef        = useRef<GainNode | null>(null);
+  const sourceRef      = useRef<MediaElementAudioSourceNode | null>(null);
+  const currentSrcRef  = useRef<string>("");
 
   const currentSong = songDataList[selectedSongIdx];
 
-  // Inisialisasi Web Audio API untuk smooth volume fade
+  /* ── Web Audio helpers ───────────────────────────────── */
   const ensureAudioCtx = () => {
     if (audioCtxRef.current) return;
-    const ctx = new AudioContext();
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
     const gain = ctx.createGain();
     gain.gain.value = 0;
     gain.connect(ctx.destination);
-
     audioCtxRef.current = ctx;
-    gainRef.current     = gain;
+    gainRef.current = gain;
   };
 
-  const connectVideoToAudio = () => {
-    const ctx   = audioCtxRef.current;
-    const gain  = gainRef.current;
+  const connectSource = () => {
     const video = videoRef.current;
-    if (!ctx || !gain || !video) return;
-    // Sambungkan source ke gain hanya sekali
-    if (!sourceRef.current) {
+    const ctx = audioCtxRef.current;
+    const gain = gainRef.current;
+    if (!video || !ctx || !gain || sourceRef.current) return;
+    try {
       const src = ctx.createMediaElementSource(video);
       src.connect(gain);
       sourceRef.current = src;
-    }
-    if (ctx.state === "suspended") ctx.resume();
+    } catch {}
   };
 
-  // Smooth sinusoidal volume fade menggunakan Web Audio scheduledValue
-  const fadeGain = (targetVal: number, durationMs: number, onComplete?: () => void) => {
-    if (fadeRafRef.current) {
-      cancelAnimationFrame(fadeRafRef.current);
-      fadeRafRef.current = null;
+  const resumeCtx = () => {
+    if (audioCtxRef.current?.state === "suspended") {
+      audioCtxRef.current.resume().catch(() => {});
     }
+  };
+
+  /* ── Volume fade via native Web Audio scheduling (zero JS CPU) ── */
+  const fadeGain = (target: number, ms: number, onDone?: () => void) => {
+    if (fadeTimerRef.current) { clearTimeout(fadeTimerRef.current); fadeTimerRef.current = null; }
     const gain = gainRef.current;
-    if (!gain) { onComplete?.(); return; }
-
-    const startVal  = gain.gain.value;
-    const startTime = performance.now();
-
-    const tick = (now: number) => {
-      const elapsed  = now - startTime;
-      const progress = Math.min(elapsed / durationMs, 1);
-      // easing cosine (S-curve nyaman di telinga)
-      const ease = 0.5 - 0.5 * Math.cos(progress * Math.PI);
-      gain.gain.value = startVal + (targetVal - startVal) * ease;
-
-      if (progress < 1) {
-        fadeRafRef.current = requestAnimationFrame(tick);
-      } else {
-        gain.gain.value = targetVal;
-        fadeRafRef.current = null;
-        onComplete?.();
-      }
-    };
-
-    fadeRafRef.current = requestAnimationFrame(tick);
+    const ctx = audioCtxRef.current;
+    if (!gain || !ctx) { onDone?.(); return; }
+    const now = ctx.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(target, now + ms / 1000);
+    if (onDone) fadeTimerRef.current = setTimeout(onDone, ms);
   };
 
-  const playWithFadeIn = (song: SongData, durationMs = 1000) => {
-    if (!song?.videoSrc) return;
+  /* ── Playback ────────────────────────────────────────── */
+  const playSong = (song: SongData, fadeDur = 500) => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!song?.videoSrc || !video) return;
 
     ensureAudioCtx();
-    connectVideoToAudio();
+    connectSource();
+    resumeCtx();
 
-    // Ganti src hanya jika berbeda
-    const newSrc = song.videoSrc;
-    if (video.src !== window.location.origin + newSrc) {
-      video.src = newSrc;
-      video.currentTime = song.startSeconds ?? 0;
+    // Ganti src hanya jika lagu berubah
+    if (currentSrcRef.current !== song.videoSrc) {
+      currentSrcRef.current = song.videoSrc;
+      setVideoReady(false);
+      video.src = song.videoSrc;
+      video.load();
+
+      // Tunggu video siap sebelum play — tidak ada blank frame
+      const onReady = () => {
+        video.removeEventListener("canplay", onReady);
+        setVideoReady(true);
+        video.muted = false;
+        video.play()
+          .then(() => fadeGain(0.85, fadeDur))
+          .catch(() => { video.muted = true; video.play().catch(() => {}); });
+      };
+      video.addEventListener("canplay", onReady, { once: true });
+    } else {
+      // Src sudah sama — langsung play dari awal
+      video.currentTime = 0;
+      setVideoReady(true);
+      video.muted = false;
+      video.play()
+        .then(() => fadeGain(0.85, fadeDur))
+        .catch(() => { video.muted = true; video.play().catch(() => {}); });
     }
-
-    video.muted = false;
-    video.play().catch(() => {});
-    fadeGain(0.85, durationMs);
   };
 
-  const stopWithFadeOut = (durationMs = 600, onDone?: () => void) => {
-    fadeGain(0, durationMs, () => {
-      videoRef.current?.pause();
+  const stopSong = (fadeDur = 400, onDone?: () => void) => {
+    fadeGain(0, fadeDur, () => {
+      const video = videoRef.current;
+      if (video) {
+        video.pause();
+        video.currentTime = 0;
+      }
+      setVideoReady(false);
       onDone?.();
     });
   };
 
-  // Cleanup on unmount
+  /* ── Lifecycle: unlock audio + preload on first gesture ── */
   useEffect(() => {
+    const unlock = () => {
+      ensureAudioCtx();
+      resumeCtx();
+      connectSource();
+      // Eagerly preload first song so hover is instant
+      const video = videoRef.current;
+      const first = songDataList.find((s) => s.videoSrc);
+      if (video && first?.videoSrc && !currentSrcRef.current) {
+        currentSrcRef.current = first.videoSrc;
+        video.src = first.videoSrc;
+        video.load();
+      }
+    };
+    window.addEventListener("pointerdown", unlock, { once: true, passive: true });
+    window.addEventListener("keydown", unlock, { once: true, passive: true });
     return () => {
-      if (fadeRafRef.current) cancelAnimationFrame(fadeRafRef.current);
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
       try { audioCtxRef.current?.close(); } catch {}
     };
   }, []);
 
+  /* ── Event handlers ──────────────────────────────────── */
   const handleMouseEnter = () => {
     if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
     setIsWheelOpen(true);
-    playWithFadeIn(currentSong);
+    playSong(currentSong);
   };
 
   const handleMouseLeave = () => {
-    stopWithFadeOut();
+    stopSong();
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     closeTimerRef.current = setTimeout(() => setIsWheelOpen(false), 450);
   };
@@ -154,8 +182,8 @@ export default function Hero() {
     if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
     setIsWheelOpen((prev) => {
       const next = !prev;
-      if (next) playWithFadeIn(currentSong);
-      else      stopWithFadeOut();
+      if (next) playSong(currentSong);
+      else      stopSong();
       return next;
     });
   };
@@ -163,18 +191,17 @@ export default function Hero() {
   const handleSongChange = (index: number) => {
     setSelectedSongIdx(index);
     const newSong = songDataList[index];
-
     setIsVideoSwitching(true);
     if (videoFadeTimerRef.current) clearTimeout(videoFadeTimerRef.current);
 
     if (newSong?.videoSrc) {
-      stopWithFadeOut(350, () => {
-        playWithFadeIn(newSong, 1000);
-        videoFadeTimerRef.current = setTimeout(() => setIsVideoSwitching(false), 300);
+      stopSong(200, () => {
+        playSong(newSong, 400);
+        videoFadeTimerRef.current = setTimeout(() => setIsVideoSwitching(false), 150);
       });
     } else {
-      stopWithFadeOut(500);
-      videoFadeTimerRef.current = setTimeout(() => setIsVideoSwitching(false), 300);
+      stopSong(300);
+      videoFadeTimerRef.current = setTimeout(() => setIsVideoSwitching(false), 150);
     }
   };
 
@@ -243,21 +270,22 @@ export default function Hero() {
             />
           </div>
 
-          {/* HTML5 Video Ambient Overlay — no controls, no YouTube UI */}
+          {/* Single video element — canplay-gated, no multi-element overhead */}
           <div
-            className={`prism-video-ambient transition-all duration-700 ease-in-out ${
-              isWheelOpen && currentSong?.videoSrc && !isVideoSwitching
-                ? "opacity-40 scale-100"
-                : "opacity-0 scale-95 pointer-events-none"
+            className={`prism-video-ambient transition-opacity duration-500 ease-in-out ${
+              isWheelOpen && videoReady && currentSong?.videoSrc && !isVideoSwitching
+                ? "opacity-40"
+                : "opacity-0 pointer-events-none"
             }`}
-            style={{ mixBlendMode: "screen" }}
+            style={{ mixBlendMode: "screen", transform: "translateZ(0)" }}
           >
             <video
               ref={videoRef}
               loop
-              muted        /* muted attr agar browser izinkan autoplay; audio dihandle via Web Audio */
+              muted
               playsInline
-              preload="none"
+              preload="auto"
+              crossOrigin="anonymous"
               className="prism-video-el"
             />
           </div>
@@ -286,10 +314,10 @@ export default function Hero() {
           type="button"
           onClick={toggleWheel}
           aria-label="Toggle song list"
-          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border bg-neutral-900/60 backdrop-blur-md flex items-center justify-center cursor-pointer shadow-sm transition-all duration-300 ${
+          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border bg-neutral-900/60 dark:bg-neutral-900/60 light:bg-white/80 backdrop-blur-md flex items-center justify-center cursor-pointer shadow-sm transition-all duration-300 ${
             isWheelOpen
-              ? "text-white border-neutral-400 bg-neutral-800/80 scale-105"
-              : "text-neutral-400 border-neutral-700/60 hover:text-white hover:border-neutral-400 hover:bg-neutral-800/80"
+              ? "text-white dark:text-white light:text-neutral-900 border-neutral-400 dark:border-neutral-400 light:border-neutral-500 bg-neutral-800/80 dark:bg-neutral-800/80 light:bg-neutral-200/90 scale-105"
+              : "text-neutral-400 dark:text-neutral-400 light:text-neutral-600 border-neutral-700/60 dark:border-neutral-700/60 light:border-neutral-300 hover:text-white dark:hover:text-white light:hover:text-black hover:border-neutral-400 dark:hover:border-neutral-400 light:hover:border-neutral-600 hover:bg-neutral-800/80 dark:hover:bg-neutral-800/80 light:hover:bg-neutral-100"
           }`}
         >
           <svg
@@ -312,8 +340,6 @@ export default function Hero() {
             <OptionWheel
               items={songItems}
               defaultSelected={selectedSongIdx}
-              textColor="#777777"
-              activeColor="#ffffff"
               side="left"
               fontSize={1.1}
               spacing={1.35}

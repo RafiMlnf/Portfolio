@@ -39,8 +39,8 @@ const OptionWheel = ({
   items = DEFAULT_ITEMS,
   defaultSelected = 0,
   onChange,
-  textColor = "#a6a6a6",
-  activeColor = "#ffffff",
+  textColor,
+  activeColor,
   side = "left",
   fontSize = 3,
   spacing = 1.4,
@@ -313,8 +313,8 @@ const OptionWheel = ({
       }`}
       style={
         {
-          "--ow-text-color": textColor,
-          "--ow-active-color": activeColor,
+          ...(textColor ? { "--ow-text-color": textColor } : {}),
+          ...(activeColor ? { "--ow-active-color": activeColor } : {}),
           "--ow-font-size": `${fontSize}rem`,
           "--ow-inset": `${inset}px`,
         } as React.CSSProperties

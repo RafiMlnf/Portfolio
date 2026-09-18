@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import dynamic from "next/dynamic";
@@ -77,24 +76,24 @@ export default function Header() {
       <div className="relative z-10 w-full px-8 md:px-12 py-6 flex items-center justify-between pointer-events-auto">
         <nav className="hidden md:flex items-center gap-5 font-narrow">
           {navItems.map((item) => (
-            <Link
+            <a
               key={item.name}
               href={item.href}
               className="text-base text-neutral-400 hover:text-white dark:hover:text-white light:hover:text-black hover:scale-105 active:scale-95 transition-all duration-200 inline-block origin-center lowercase"
             >
               {item.name}
-            </Link>
+            </a>
           ))}
         </nav>
 
         <div className="flex items-center gap-4 ml-auto font-narrow">
           <div className="hidden md:block">
-            <Link
+            <a
               href="#footer"
               className="px-4 py-1.5 text-sm rounded-full transition-opacity lowercase bg-white text-black dark:bg-white dark:text-black light:bg-neutral-900 light:text-white hover:opacity-80"
             >
               contact
-            </Link>
+            </a>
           </div>
 
           <button
@@ -169,22 +168,22 @@ export default function Header() {
       {isOpen && (
         <div className="md:hidden relative z-10 font-narrow bg-black/95 dark:bg-black/95 light:bg-white/95 border-b border-neutral-800 px-8 py-4 flex flex-col gap-4 pointer-events-auto">
           {navItems.map((item) => (
-            <Link
+            <a
               key={item.name}
               href={item.href}
               onClick={() => setIsOpen(false)}
               className="text-base text-neutral-400 hover:text-white hover:translate-x-1 transition-all duration-200 text-left lowercase"
             >
               {item.name}
-            </Link>
+            </a>
           ))}
-          <Link
+          <a
             href="#footer"
             onClick={() => setIsOpen(false)}
             className="w-full text-center px-4 py-2 text-sm text-black bg-white dark:text-black dark:bg-white light:text-white light:bg-black rounded-full transition-opacity lowercase"
           >
             contact
-          </Link>
+          </a>
         </div>
       )}
     </motion.header>

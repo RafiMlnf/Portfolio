@@ -329,9 +329,10 @@ html.light .shaky-retro-text {
   height: 100%;
   overflow: hidden;
   pointer-events: none;
+  contain: strict;
 }
 
-/* Native <video> element: stretched to fill, centered, animated drift */
+/* Native <video> element: stretched to fill, centered, hardware accelerated */
 .prism-video-el {
   position: absolute;
   top: 50%;
@@ -339,32 +340,11 @@ html.light .shaky-retro-text {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: translate(-50%, -50%);
+  transform: translate3d(-50%, -50%, 0);
   pointer-events: none;
-  filter: contrast(125%) brightness(90%) blur(0.4px);
-  animation: ambient-video-drift 18s ease-in-out infinite alternate;
-  will-change: transform, filter;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
-
-/* Smooth ambient breathing & floating drift animation */
-@keyframes ambient-video-drift {
-  0% {
-    transform: translate(-50%, -50%) scale(1);
-    filter: brightness(95%) contrast(120%) blur(0.3px);
-  }
-  50% {
-    transform: translate(-49.2%, -50.8%) scale(1.05);
-    filter: brightness(110%) contrast(135%) blur(0.5px);
-  }
-  100% {
-    transform: translate(-50.8%, -49.2%) scale(1.08);
-    filter: brightness(100%) contrast(125%) blur(0.4px);
-  }
-}
-
-
-
-
 
 
 

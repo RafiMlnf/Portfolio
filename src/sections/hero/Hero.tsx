@@ -345,7 +345,7 @@ export default function Hero() {
               spacing={1.35}
               curve={0.8}
               tilt={5}
-              blur={1.8}
+              blur={0}
               fade={0.28}
               smoothing={110}
               inset={8}

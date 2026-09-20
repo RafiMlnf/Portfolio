@@ -112,9 +112,20 @@ export default function Hero() {
         video.removeEventListener("canplay", onReady);
         setVideoReady(true);
         video.muted = false;
+        resumeCtx();
         video.play()
           .then(() => fadeGain(0.85, fadeDur))
-          .catch(() => { video.muted = true; video.play().catch(() => {}); });
+          .catch(() => {
+            // Autoplay dicegah atau audioctx suspended, coba lagi setelah resume
+            resumeCtx();
+            video.muted = false;
+            video.play()
+              .then(() => fadeGain(0.85, fadeDur))
+              .catch(() => {
+                video.muted = true;
+                video.play().catch(() => {});
+              });
+          });
       };
       video.addEventListener("canplay", onReady, { once: true });
     } else {
@@ -122,9 +133,19 @@ export default function Hero() {
       video.currentTime = 0;
       setVideoReady(true);
       video.muted = false;
+      resumeCtx();
       video.play()
         .then(() => fadeGain(0.85, fadeDur))
-        .catch(() => { video.muted = true; video.play().catch(() => {}); });
+        .catch(() => {
+          resumeCtx();
+          video.muted = false;
+          video.play()
+            .then(() => fadeGain(0.85, fadeDur))
+            .catch(() => {
+              video.muted = true;
+              video.play().catch(() => {});
+            });
+        });
     }
   };
 
@@ -345,7 +366,7 @@ export default function Hero() {
               spacing={1.35}
               curve={0.8}
               tilt={5}
-              blur={0}
+              blur={1.8}
               fade={0.28}
               smoothing={110}
               inset={8}

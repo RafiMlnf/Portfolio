@@ -176,64 +176,84 @@ export default function ProjectsClient({ initialProjects }: ProjectsClientProps)
                   >
                     <div>
                       {/* Top metadata */}
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="font-narrow text-[11px] tracking-wider uppercase text-neutral-500 truncate max-w-[110px]">
-                          {project.category}
-                        </span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Live Deploy Pulse */}
-                          {project.liveUrl && (
-                            <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                              <span>live</span>
-                            </span>
-                          )}
+                      <div className="flex items-center justify-end gap-1.5 mb-3">
+                        {/* Live Deploy Pulse */}
+                        {project.liveUrl && (
+                          <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                            <span>live</span>
+                          </span>
+                        )}
 
-                          {/* Private / Public Badge */}
-                          {project.isPrivate ? (
-                            <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
-                              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                              </svg>
-                              <span>private</span>
-                            </span>
-                          ) : (
-                            <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded-full bg-neutral-800/90 text-neutral-400 border border-neutral-700/50">
-                              public
-                            </span>
-                          )}
+                        {/* Private / Public Badge */}
+                        {project.isPrivate ? (
+                          <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            <span>private</span>
+                          </span>
+                        ) : (
+                          <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded-full bg-neutral-800/90 text-neutral-400 border border-neutral-700/50">
+                            public
+                          </span>
+                        )}
 
-                          <span className="font-narrow text-[11px] text-neutral-500">{project.year}</span>
-                        </div>
+                        <span className="font-narrow text-[11px] text-neutral-500">{project.year}</span>
                       </div>
 
                       {/* Mockup / Live Preview Container */}
                       <div className="w-full aspect-[16/10] rounded-lg overflow-hidden mb-4 relative border border-neutral-800/60 dark:border-neutral-800/60 light:border-neutral-200 bg-neutral-900/60 dark:bg-neutral-900/60 light:bg-neutral-100 flex items-center justify-center group-hover:scale-[1.01] transition-transform duration-500">
                         {project.liveUrl ? (
-                          /* Live App Mini Visualizer */
-                          <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 flex flex-col justify-between p-3.5">
-                            <div className="flex items-center justify-between w-full border-b border-neutral-800/80 pb-2">
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-red-500/60" />
-                                <div className="w-2 h-2 rounded-full bg-yellow-500/60" />
-                                <div className="w-2 h-2 rounded-full bg-green-500/60" />
-                              </div>
-                              <span className="font-mono text-[8px] text-emerald-400 truncate max-w-[120px] flex items-center gap-1">
-                                <span className="w-1 h-1 rounded-full bg-emerald-400" />
-                                {project.liveUrl.replace(/^https?:\/\//, "")}
-                              </span>
-                            </div>
+                          /* Live App Mini Preview */
+                          <div className="absolute inset-0 bg-neutral-950 overflow-hidden">
+                            {/* Iframe Viewport Scaled Down */}
+                            <div className="relative w-full h-full overflow-hidden bg-neutral-900">
+                              <iframe
+                                src={project.liveUrl}
+                                title={`${project.name} live preview`}
+                                tabIndex={-1}
+                                loading="lazy"
+                                scrolling="no"
+                                className="w-[200%] h-[200%] origin-top-left scale-50 border-0 pointer-events-none select-none bg-white opacity-95 transition-opacity group-hover:opacity-100"
+                                sandbox="allow-scripts allow-same-origin"
+                              />
 
-                            <div className="my-auto text-center py-2">
-                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-neutral-200 text-[10px] font-narrow group-hover:bg-white/10 group-hover:border-emerald-500/30 transition-all">
-                                <span>Preview Live App</span>
-                                <span className="text-emerald-400">↗</span>
+                              {/* Subtle glass hover overlay with quick inspect hint */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-2.5 pointer-events-none z-10">
+                                <span className="font-narrow text-[10px] text-emerald-300 bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm border border-emerald-500/20 flex items-center gap-1">
+                                  <span>Preview Website</span>
+                                  <span>↗</span>
+                                </span>
+                                <span className="font-mono text-[8px] text-neutral-400 bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-sm">
+                                  klik detail
+                                </span>
                               </div>
                             </div>
+                          </div>
+                        ) : project.previewImage ? (
+                          /* Image Snapshot Preview */
+                          <div className="absolute inset-0 bg-neutral-950 overflow-hidden">
+                            {/* Image Container with Cover & Hover Zoom */}
+                            <div className="relative w-full h-full overflow-hidden bg-neutral-950">
+                              <Image
+                                src={project.previewImage}
+                                alt={`${project.name} preview`}
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                className="object-cover object-top opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                              />
 
-                            <div className="flex items-center justify-between pt-1.5 border-t border-neutral-800/60 font-mono text-[8px] text-neutral-500">
-                              <span>deployed: vercel</span>
-                              <span className="text-neutral-400 group-hover:text-emerald-400 transition-colors">click to explore →</span>
+                              {/* Subtle glass hover overlay */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-2.5 pointer-events-none z-10">
+                                <span className="font-narrow text-[10px] text-blue-300 bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm border border-blue-500/20 flex items-center gap-1">
+                                  <span>Lihat Preview</span>
+                                  <span>↗</span>
+                                </span>
+                                <span className="font-mono text-[8px] text-neutral-400 bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-sm">
+                                  klik detail
+                                </span>
+                              </div>
                             </div>
                           </div>
                         ) : (
@@ -524,6 +544,27 @@ export default function ProjectsClient({ initialProjects }: ProjectsClientProps)
                               className="w-full h-full border-0 bg-white"
                               loading="lazy"
                               sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                            />
+                          </div>
+                        </div>
+                      ) : selectedProject.previewImage ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-narrow text-xs text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                              Application Snapshot & System Architecture
+                            </span>
+                            <span className="font-mono text-[10px] text-neutral-500">
+                              {selectedProject.name}
+                            </span>
+                          </div>
+                          <div className="w-full h-[320px] sm:h-[400px] rounded-xl overflow-hidden border border-neutral-800 bg-neutral-950 relative shadow-inner group">
+                            <Image
+                              src={selectedProject.previewImage}
+                              alt={selectedProject.title}
+                              fill
+                              className="object-contain p-2 bg-neutral-950"
+                              sizes="(max-width: 768px) 100vw, 800px"
                             />
                           </div>
                         </div>

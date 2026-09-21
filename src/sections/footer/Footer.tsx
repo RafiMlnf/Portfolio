@@ -86,33 +86,65 @@ function FlickerInText({
   );
 }
 
+// Syllable-by-syllable smooth green block highlight wave & slight zoom animation
+const headlineWords = [
+  {
+    word: "Let's",
+    syllables: ["Let's"],
+  },
+  {
+    word: "build",
+    syllables: ["build"],
+  },
+  {
+    word: "something",
+    syllables: ["some", "thing"],
+  },
+  {
+    word: "extraordinary",
+    syllables: ["ex", "traor", "di", "na", "ry"],
+  },
+  {
+    word: "together.",
+    syllables: ["to", "ge", "ther."],
+  },
+];
+
+function SyllableWaveHeadline() {
+  const cycleDuration = 5.2; // durasi 1 putaran penuh gelombang (detik)
+  const stepDelay = 0.28; // jeda waktu antar suku kata (detik)
+  let globalSyllableIndex = 0;
+
+  return (
+    <>
+      {headlineWords.map((item, wIdx) => (
+        <span key={wIdx} className="inline-block whitespace-nowrap mr-[0.28em] last:mr-0">
+          {item.syllables.map((syl, sIdx) => {
+            const delay = globalSyllableIndex * stepDelay;
+            globalSyllableIndex++;
+            return (
+              <span
+                key={sIdx}
+                className="headline-syllable"
+                style={
+                  {
+                    "--syllable-cycle": `${cycleDuration}s`,
+                    "--syllable-delay": `${delay}s`,
+                  } as React.CSSProperties
+                }
+              >
+                {syl}
+              </span>
+            );
+          })}
+        </span>
+      ))}
+    </>
+  );
+}
+
 export default function Footer() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState<string>("");
-
-  // Live real-time clock (Jakarta / WIB time: UTC+7)
-  useEffect(() => {
-    const updateTime = () => {
-      try {
-        const now = new Date();
-        const formatted = new Intl.DateTimeFormat("en-US", {
-          timeZone: "Asia/Jakarta",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: true,
-        }).format(now);
-        setCurrentTime(formatted);
-      } catch {
-        const now = new Date();
-        setCurrentTime(now.toLocaleTimeString("en-US"));
-      }
-    };
-
-    updateTime();
-    const timer = setInterval(updateTime, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const handleCopy = (key: string, value: string) => {
     navigator.clipboard.writeText(value);
@@ -158,43 +190,14 @@ export default function Footer() {
 
       {/* ── MAIN CONTENT CONTAINER ─────────────────────────────────── */}
       <div className="max-w-5xl mx-auto px-6 sm:px-8 md:px-12 pt-14 pb-12">
-        {/* Top Status & Live Clock Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-8 border-b border-neutral-800/60 dark:border-neutral-800/60 light:border-neutral-200">
-          <div className="flex items-center gap-3">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_10px_#10b981]" />
-            </span>
-            <span className="font-narrow text-xs sm:text-sm tracking-wide text-neutral-300 dark:text-neutral-300 light:text-neutral-700 uppercase font-medium">
-              <FlickerInText text="Available for new opportunities" delay={0.05} />
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 font-narrow text-xs sm:text-sm text-neutral-400 dark:text-neutral-400 light:text-neutral-600">
-            <span className="text-neutral-500 font-medium">JAKARTA, ID</span>
-            <span>•</span>
-            <span className="tabular-nums font-narrow tracking-wider text-neutral-200 dark:text-neutral-200 light:text-neutral-800 font-semibold">
-              {currentTime || "00:00:00 AM"}
-            </span>
-            <span className="text-[10px] sm:text-xs text-neutral-500 font-medium">[WIB / UTC+7]</span>
-          </div>
-        </div>
 
         {/* Big Editorial Headline with Character Flicker Entrance */}
         <div className="py-12 sm:py-16">
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <span className="font-narrow text-xs text-emerald-400 uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-950/20">
-                <FlickerInText text="[ GET IN TOUCH ]" delay={0.1} by="word" />
-              </span>
-            </div>
 
             <h2 className="font-serif italic text-4xl sm:text-6xl md:text-7xl font-normal tracking-tight text-neutral-100 dark:text-neutral-100 light:text-neutral-900 leading-[1.08] max-w-3xl">
               <span className="shaky-retro-text">
-                <FlickerInText
-                  text="Let's build something extraordinary together."
-                  delay={0.15}
-                />
+                <SyllableWaveHeadline />
               </span>
             </h2>
 

@@ -415,6 +415,90 @@ html.light .shaky-retro-text {
   animation-play-state: paused;
 }
 
+/* ── Smooth Green Block Wave & Text Zoom Animation ── */
+.headline-syllable {
+  display: inline-block;
+  position: relative;
+  isolation: isolate;
+  padding: 0;
+  margin: 0;
+  will-change: transform, color;
+  animation: syllable-text-zoom var(--syllable-cycle, 5.2s) infinite cubic-bezier(0.25, 1, 0.5, 1) var(--syllable-delay, 0s);
+}
+
+.headline-syllable::before {
+  content: "";
+  position: absolute;
+  inset: -0.06em -0.04em;
+  background-color: #0ed600;
+  border-radius: 2px;
+  z-index: -1;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: syllable-block-expand var(--syllable-cycle, 5.2s) infinite cubic-bezier(0.25, 1, 0.5, 1) var(--syllable-delay, 0s);
+}
+
+@keyframes syllable-block-expand {
+  0% {
+    transform: scaleX(0);
+    transform-origin: left center;
+    opacity: 0;
+  }
+  1.5% {
+    opacity: 1;
+  }
+  /* Melebar penuh dari kiri ke kanan */
+  6% {
+    transform: scaleX(1);
+    transform-origin: left center;
+    opacity: 1;
+  }
+  /* Tahan sejenak saat teks nge-zoom */
+  11% {
+    transform: scaleX(1);
+    transform-origin: right center;
+    opacity: 1;
+  }
+  /* Mulus keluar menyusut ke kanan */
+  16% {
+    transform: scaleX(0);
+    transform-origin: right center;
+    opacity: 0.8;
+  }
+  16.1%, 100% {
+    transform: scaleX(0);
+    transform-origin: left center;
+    opacity: 0;
+  }
+}
+
+@keyframes syllable-text-zoom {
+  0% {
+    transform: scale(1);
+    color: inherit;
+  }
+  2% {
+    color: #000000;
+    text-shadow: none;
+  }
+  /* Teks nge-zoom sedikit saat blok hijau sedang penuh */
+  6%, 11% {
+    transform: scale(1.09);
+    color: #000000;
+    text-shadow: none;
+  }
+  /* Kembali ke skala normal saat blok selesai lewat */
+  16% {
+    transform: scale(1);
+    color: inherit;
+  }
+  100% {
+    transform: scale(1);
+    color: inherit;
+  }
+}
+
+
 
 
 

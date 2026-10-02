@@ -158,36 +158,11 @@ export default function Footer() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const tickerItems = [
-    "OPEN FOR COLLABORATION",
-    "FRONTEND & INTERACTIVE DEV",
-    "RAFI MAULANA",
-    "BASED IN INDONESIA",
-    "AVAILABLE FOR FREELANCE & FULLTIME",
-    "WEB ARCHITECTURE & DESIGN",
-  ];
-
   return (
     <footer
       id="footer"
       className="relative w-full overflow-hidden border-t border-neutral-800/80 dark:border-neutral-800/80 light:border-neutral-200 bg-neutral-950 dark:bg-neutral-950 light:bg-neutral-50 transition-colors duration-300"
     >
-      {/* ── TOP INFINITE MARQUEE TICKER TAPE ──────────────────────── */}
-      <div className="relative w-full border-b border-neutral-800/60 dark:border-neutral-800/60 light:border-neutral-200 py-3 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-neutral-100/60 overflow-hidden select-none">
-        <div className="animate-footer-marquee flex items-center whitespace-nowrap">
-          {[...tickerItems, ...tickerItems, ...tickerItems, ...tickerItems].map(
-            (item, idx) => (
-              <div key={idx} className="flex items-center gap-4 px-4">
-                <span className="font-narrow text-xs tracking-widest text-neutral-400 dark:text-neutral-400 light:text-neutral-600 uppercase font-medium">
-                  {item}
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              </div>
-            )
-          )}
-        </div>
-      </div>
-
       {/* ── MAIN CONTENT CONTAINER ─────────────────────────────────── */}
       <div className="max-w-5xl mx-auto px-6 sm:px-8 md:px-12 pt-14 pb-12">
 

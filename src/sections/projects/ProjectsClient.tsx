@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useInView } from "motion/react";
 import { posterImages, type PosterItem } from "@/data/posters";
 import type { GitHubProject } from "@/lib/github";
 
@@ -20,6 +20,47 @@ export default function ProjectsClient({ initialProjects }: ProjectsClientProps)
   const [selectedProject, setSelectedProject] = useState<GitHubProject | null>(null);
   const [mounted, setMounted] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
+  const appsSectionRef = useRef<HTMLDivElement>(null);
+  // once: false agar animasi bisa terpicu berulang kali ketika di-scroll ulang
+  const isAppsInView = useInView(appsSectionRef, { once: false, amount: 0.15 });
+
+  // State transisi grid: awalnya padat/banyak (false), lalu expand ke 4 (true)
+  const [isGridExpanded, setIsGridExpanded] = useState(false);
+  // Konten card: awalnya kosong saat transisi, lalu muncul setelah expand selesai
+  const [showCardContent, setShowCardContent] = useState(false);
+
+  useEffect(() => {
+    if (isAppsInView) {
+      // 1. Tampilkan sebentar wujud kisi-kisi grid banyak yang kosong (300ms)
+      const expandTimer = setTimeout(() => {
+        setIsGridExpanded(true);
+      }, 350);
+
+      // 2. Setelah animasi ekspansi dari banyak ke 4 kolom selesai (durasi ~800ms), munculkan isi gambar & teks
+      const contentTimer = setTimeout(() => {
+        setShowCardContent(true);
+      }, 1150);
+
+      return () => {
+        clearTimeout(expandTimer);
+        clearTimeout(contentTimer);
+      };
+    } else {
+      // Reset kembali ke state banyak kotak kosong saat pengguna scroll keluar dari section
+      setIsGridExpanded(false);
+      setShowCardContent(false);
+    }
+  }, [isAppsInView]);
+
+  const handleSelectTab = (tab: ProjectCategory) => {
+    if (tab === "apps" && activeTab !== "apps") {
+      setIsGridExpanded(false);
+      setShowCardContent(false);
+      setTimeout(() => setIsGridExpanded(true), 300);
+      setTimeout(() => setShowCardContent(true), 1100);
+    }
+    setActiveTab(tab);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -92,7 +133,7 @@ export default function ProjectsClient({ initialProjects }: ProjectsClientProps)
           <div className="inline-flex p-1 rounded-full border border-neutral-800/80 dark:border-neutral-800/80 light:border-neutral-300 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-neutral-100/90 backdrop-blur-md self-start md:self-auto">
             <button
               type="button"
-              onClick={() => setActiveTab("apps")}
+              onClick={() => handleSelectTab("apps")}
               className={`relative px-5 sm:px-6 py-2 rounded-full font-narrow text-sm transition-all duration-300 cursor-pointer lowercase ${
                 activeTab === "apps"
                   ? "text-neutral-900 dark:text-neutral-900 light:text-white font-medium"
@@ -122,7 +163,7 @@ export default function ProjectsClient({ initialProjects }: ProjectsClientProps)
 
             <button
               type="button"
-              onClick={() => setActiveTab("posters")}
+              onClick={() => handleSelectTab("posters")}
               className={`relative px-5 sm:px-6 py-2 rounded-full font-narrow text-sm transition-all duration-300 cursor-pointer lowercase ${
                 activeTab === "posters"
                   ? "text-neutral-900 dark:text-neutral-900 light:text-white font-medium"
@@ -156,238 +197,242 @@ export default function ProjectsClient({ initialProjects }: ProjectsClientProps)
         <AnimatePresence mode="wait">
           {activeTab === "apps" ? (
             <motion.div
+              ref={appsSectionRef}
               key="apps-tab"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.35, ease: "easeOut" }}
-              className="space-y-6"
+              className="space-y-6 relative"
             >
-              {/* Apps Grid: 4 cards per row on large screens */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 pt-2">
+              {/* Apps Flat Grid: pure CSS grid-cols transition via CSS vars (lebih ringan dari FLIP layout) */}
+              <div
+                style={
+                  {
+                    "--cols-base": isGridExpanded ? "1" : "8",
+                    "--cols-sm": isGridExpanded ? "2" : "6",
+                    "--cols-lg": isGridExpanded ? "4" : "8",
+                  } as React.CSSProperties
+                }
+                className="w-full grid [grid-template-columns:repeat(var(--cols-base),1fr)] sm:[grid-template-columns:repeat(var(--cols-sm),1fr)] lg:[grid-template-columns:repeat(var(--cols-lg),1fr)] [transition:grid-template-columns_750ms_cubic-bezier(0.16,1,0.3,1)] [will-change:grid-template-columns]"
+              >
                 {initialProjects.map((project, idx) => (
-                  <motion.article
+                  <article
                     key={project.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: idx * 0.05 }}
-                    onClick={() => setSelectedProject(project)}
-                    className="group relative flex flex-col justify-between p-4 sm:p-5 rounded-xl border border-neutral-800/80 dark:border-neutral-800/80 light:border-neutral-200 bg-neutral-950/40 dark:bg-neutral-950/40 light:bg-neutral-50/80 hover:border-neutral-700 dark:hover:border-neutral-700 light:hover:border-neutral-300 transition-all duration-300 hover:shadow-lg cursor-pointer"
+                    onClick={() => isGridExpanded && setSelectedProject(project)}
+                    className={`group relative flex flex-col justify-between transition-colors duration-300 cursor-pointer border-neutral-800/80 dark:border-neutral-800/80 light:border-neutral-300 ${
+                      isGridExpanded
+                        ? "p-5 sm:p-6 min-h-[380px] bg-transparent hover:bg-neutral-900/40 dark:hover:bg-neutral-900/40 light:hover:bg-neutral-100/60"
+                        : "p-0 min-h-[100px] sm:min-h-[120px] bg-neutral-900/10 hover:bg-neutral-900/20 border-r border-b pointer-events-none"
+                    } ${
+                      isGridExpanded
+                        ? idx === initialProjects.length - 1
+                          ? "border-b-0"
+                          : "border-b"
+                        : ""
+                    } ${
+                      isGridExpanded
+                        ? idx >= Math.floor((initialProjects.length - 1) / 2) * 2
+                          ? "sm:border-b-0"
+                          : "sm:border-b"
+                        : ""
+                    } ${
+                      isGridExpanded
+                        ? idx >= Math.floor((initialProjects.length - 1) / 4) * 4
+                          ? "lg:border-b-0"
+                          : "lg:border-b"
+                        : ""
+                    } ${
+                      isGridExpanded
+                        ? idx % 2 === 0
+                          ? "sm:border-r"
+                          : "sm:border-r-0"
+                        : ""
+                    } ${
+                      isGridExpanded
+                        ? (idx + 1) % 4 !== 0
+                          ? "lg:border-r"
+                          : "lg:border-r-0"
+                        : ""
+                    }`}
                   >
-                    <div>
-                      {/* Top metadata */}
-                      <div className="flex items-center justify-end gap-1.5 mb-3">
-                        {/* Live Deploy Pulse */}
-                        {project.liveUrl && (
-                          <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                            <span>live</span>
-                          </span>
-                        )}
-
-                        {/* Private / Public Badge */}
-                        {project.isPrivate ? (
-                          <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
-                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                            <span>private</span>
-                          </span>
-                        ) : (
-                          <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded-full bg-neutral-800/90 text-neutral-400 border border-neutral-700/50">
-                            public
-                          </span>
-                        )}
-
-                        <span className="font-narrow text-[11px] text-neutral-500">{project.year}</span>
-                      </div>
-
-                      {/* Mockup / Live Preview Container */}
-                      <div className="w-full aspect-[16/10] rounded-lg overflow-hidden mb-4 relative border border-neutral-800/60 dark:border-neutral-800/60 light:border-neutral-200 bg-neutral-900/60 dark:bg-neutral-900/60 light:bg-neutral-100 flex items-center justify-center group-hover:scale-[1.01] transition-transform duration-500">
-                        {project.liveUrl ? (
-                          /* Live App Mini Preview */
-                          <div className="absolute inset-0 bg-neutral-950 overflow-hidden">
-                            {/* Iframe Viewport Scaled Down */}
-                            <div className="relative w-full h-full overflow-hidden bg-neutral-900">
-                              <iframe
-                                src={project.liveUrl}
-                                title={`${project.name} live preview`}
-                                tabIndex={-1}
-                                loading="lazy"
-                                scrolling="no"
-                                className="w-[200%] h-[200%] origin-top-left scale-50 border-0 pointer-events-none select-none bg-white opacity-95 transition-opacity group-hover:opacity-100"
-                                sandbox="allow-scripts allow-same-origin"
-                              />
-
-                              {/* Subtle glass hover overlay with quick inspect hint */}
-                              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-2.5 pointer-events-none z-10">
-                                <span className="font-narrow text-[10px] text-emerald-300 bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm border border-emerald-500/20 flex items-center gap-1">
-                                  <span>Preview Website</span>
-                                  <span>↗</span>
-                                </span>
-                                <span className="font-mono text-[8px] text-neutral-400 bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-sm">
-                                  klik detail
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ) : project.previewImage ? (
-                          /* Image Snapshot Preview */
-                          <div className="absolute inset-0 bg-neutral-950 overflow-hidden">
-                            {/* Image Container with Cover & Hover Zoom */}
-                            <div className="relative w-full h-full overflow-hidden bg-neutral-950">
-                              <Image
-                                src={project.previewImage}
-                                alt={`${project.name} preview`}
-                                fill
-                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                className="object-cover object-top opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
-                              />
-
-                              {/* Subtle glass hover overlay */}
-                              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-2.5 pointer-events-none z-10">
-                                <span className="font-narrow text-[10px] text-blue-300 bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm border border-blue-500/20 flex items-center gap-1">
-                                  <span>Lihat Preview</span>
-                                  <span>↗</span>
-                                </span>
-                                <span className="font-mono text-[8px] text-neutral-400 bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-sm">
-                                  klik detail
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          /* Code Architecture Wireframe */
-                          <div className="absolute inset-0 p-3.5 flex flex-col justify-between pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity">
-                            <div className="flex items-center justify-between w-full border-b border-neutral-800 dark:border-neutral-800 light:border-neutral-200 pb-2">
-                              <div className="flex items-center gap-1">
-                                <div className="w-2 h-2 rounded-full bg-red-500/40" />
-                                <div className="w-2 h-2 rounded-full bg-yellow-500/40" />
-                                <div className="w-2 h-2 rounded-full bg-green-500/40" />
-                              </div>
-                              <span className="font-mono text-[9px] text-neutral-400 truncate max-w-[140px]">
-                                {project.isPrivate ? "🔒 confidential" : project.name}
+                    {/* Card Inner Content: Kosong saat transisi banyak grid, baru fade-in setelah expand ke 4 grid selesai */}
+                    <div
+                      className={`flex flex-col justify-between h-full transition-all duration-500 ${
+                        showCardContent
+                          ? "opacity-100 translate-y-0"
+                          : "opacity-0 translate-y-2 pointer-events-none"
+                      }`}
+                      style={{
+                        transitionDelay: showCardContent ? `${idx * 45}ms` : "0ms",
+                      }}
+                    >
+                      <div>
+                        {/* Top metadata */}
+                        <div className="flex items-center justify-between gap-1.5 mb-3">
+                          {/* Live Indicator (Align Kiri, No Badge, Static Dot) */}
+                          <div>
+                            {project.liveUrl && (
+                              <span className="font-narrow text-[10px] text-emerald-400 flex items-center gap-1.5 lowercase">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                <span>live</span>
                               </span>
-                            </div>
+                            )}
+                          </div>
 
-                            <div className="space-y-1.5 py-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-mono text-[9px] text-blue-400/80">const</span>
-                                <span className="font-mono text-[9px] text-neutral-300 truncate max-w-[100px]">{project.id.replace(/[^a-zA-Z0-9]/g, "_")}</span>
-                                <span className="font-mono text-[9px] text-neutral-500">=</span>
-                                <span className="font-mono text-[9px] text-emerald-400/80">&#123;</span>
-                              </div>
-                              <div className="pl-3 space-y-0.5">
-                                <div className="font-mono text-[8px] text-neutral-400 truncate">
-                                  status: <span className="text-amber-300">&quot;{project.isPrivate ? "private" : "open"}&quot;</span>,
-                                </div>
-                                <div className="font-mono text-[8px] text-neutral-400 truncate">
-                                  stack: <span className="text-purple-300">&quot;{project.techStack[0] || "Software"}&quot;</span>,
+                          {/* Right side: Private/Public badge & Year */}
+                          <div className="flex items-center gap-1.5">
+                            {/* Private / Public Badge */}
+                            {project.isPrivate ? (
+                              <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                <span>private</span>
+                              </span>
+                            ) : (
+                              <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800">
+                                public
+                              </span>
+                            )}
+
+                            <span className="font-mono text-[10px] text-neutral-500">{project.year}</span>
+                          </div>
+                        </div>
+
+                        {/* Mockup / Live Preview Container - Flat without rounded borders */}
+                        <div className="w-full aspect-[16/10] overflow-hidden mb-4 relative border border-neutral-800/80 dark:border-neutral-800/80 light:border-neutral-300 bg-neutral-950 flex items-center justify-center">
+                          {project.liveUrl ? (
+                            /* Live App Mini Preview */
+                            <div className="absolute inset-0 bg-neutral-950 overflow-hidden">
+                              <div className="relative w-full h-full overflow-hidden bg-neutral-900">
+                                <iframe
+                                  src={project.liveUrl}
+                                  title={`${project.name} live preview`}
+                                  tabIndex={-1}
+                                  loading="lazy"
+                                  scrolling="no"
+                                  className="w-[200%] h-[200%] origin-top-left scale-50 border-0 pointer-events-none select-none bg-white opacity-90 transition-opacity duration-300 group-hover:opacity-100"
+                                  sandbox="allow-scripts allow-same-origin"
+                                />
+
+                                {/* Subtle hover overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end justify-between p-2 pointer-events-none z-10">
+                                  <span className="font-narrow text-[10px] text-emerald-300 bg-black/80 px-2 py-0.5 border border-emerald-500/20 flex items-center gap-1">
+                                    <span>Preview</span>
+                                    <span>↗</span>
+                                  </span>
                                 </div>
                               </div>
-                              <div className="font-mono text-[9px] text-emerald-400/80">&#125;;</div>
                             </div>
+                          ) : project.previewImage ? (
+                            /* Image Snapshot Preview */
+                            <div className="absolute inset-0 bg-neutral-950 overflow-hidden">
+                              <div className="relative w-full h-full overflow-hidden bg-neutral-950">
+                                <Image
+                                  src={project.previewImage}
+                                  alt={`${project.name} preview`}
+                                  fill
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                                  className="object-cover object-top opacity-85 group-hover:opacity-100 transition-opacity duration-300"
+                                />
 
-                            <div className="flex justify-between items-center pt-1.5 border-t border-neutral-800/40">
-                              <span className="font-mono text-[8px] text-neutral-500">
-                                v// {project.year}
-                              </span>
-                              <div className="w-4 h-4 rounded-full border border-neutral-700/60 dark:border-neutral-700/60 light:border-neutral-300 flex items-center justify-center text-[8px] text-neutral-400">
-                                →
+                                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end justify-between p-2 pointer-events-none z-10">
+                                  <span className="font-narrow text-[10px] text-blue-300 bg-black/80 px-2 py-0.5 border border-blue-500/20 flex items-center gap-1">
+                                    <span>Snapshot</span>
+                                    <span>↗</span>
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
+                          ) : (
+                            /* Code Architecture Wireframe */
+                            <div className="absolute inset-0 p-3 flex flex-col justify-between pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center justify-between w-full border-b border-neutral-800 pb-1.5">
+                                <div className="flex items-center gap-1">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-red-500/40" />
+                                  <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/40" />
+                                  <div className="w-1.5 h-1.5 rounded-full bg-green-500/40" />
+                                </div>
+                                <span className="font-mono text-[9px] text-neutral-400 truncate max-w-[130px]">
+                                  {project.isPrivate ? "🔒 confidential" : project.name}
+                                </span>
+                              </div>
 
-                      {/* Project Title & Description */}
-                      <h3 className="font-narrow text-xl font-normal tracking-tight text-neutral-100 mb-2 group-hover:text-blue-400 dark:group-hover:text-blue-400 light:group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
-                        <span className="truncate">{project.title}</span>
-                        {project.isPrivate && (
-                          <span className="text-[10px] text-neutral-500 font-mono font-normal shrink-0">
-                            (private)
-                          </span>
-                        )}
-                      </h3>
-                      <p className="font-sans text-xs text-neutral-400 dark:text-neutral-400 light:text-neutral-600 leading-relaxed mb-4 line-clamp-3">
-                        {project.description}
-                      </p>
-                    </div>
+                              <div className="space-y-1 py-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-mono text-[9px] text-blue-400/80">const</span>
+                                  <span className="font-mono text-[9px] text-neutral-300 truncate max-w-[100px]">{project.id.replace(/[^a-zA-Z0-9]/g, "_")}</span>
+                                  <span className="font-mono text-[9px] text-neutral-500">=</span>
+                                  <span className="font-mono text-[9px] text-emerald-400/80">&#123;</span>
+                                </div>
+                                <div className="pl-3 space-y-0.5">
+                                  <div className="font-mono text-[8px] text-neutral-400 truncate">
+                                    status: <span className="text-amber-300">&quot;{project.isPrivate ? "private" : "open"}&quot;</span>,
+                                  </div>
+                                  <div className="font-mono text-[8px] text-neutral-400 truncate">
+                                    stack: <span className="text-purple-300">&quot;{project.techStack[0] || "Software"}&quot;</span>,
+                                  </div>
+                                </div>
+                                <div className="font-mono text-[9px] text-emerald-400/80">&#125;;</div>
+                              </div>
 
-                    {/* Footer: Tech Stack Pills & Action Links */}
-                    <div>
-                      <div className="flex flex-wrap gap-1 mb-4">
-                        {project.techStack.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag}
-                            className="font-narrow text-[10px] px-2 py-0.5 rounded-md bg-neutral-900/90 dark:bg-neutral-900/90 light:bg-neutral-200/80 text-neutral-300 dark:text-neutral-300 light:text-neutral-700 border border-neutral-800/80 truncate max-w-[110px]"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        {project.techStack.length > 3 && (
-                          <span className="font-narrow text-[9px] px-1.5 py-0.5 rounded-md text-neutral-500">
-                            +{project.techStack.length - 3}
-                          </span>
-                        )}
-                      </div>
-
-                      <div
-                        className="flex items-center justify-between pt-3 border-t border-neutral-800/50 dark:border-neutral-800/50 light:border-neutral-200"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setSelectedProject(project)}
-                          className="font-narrow text-xs text-neutral-300 hover:text-white dark:hover:text-white flex items-center gap-1 group/btn cursor-pointer"
-                        >
-                          <span>Detail</span>
-                          <span className="inline-block transition-transform duration-200 group-hover/btn:translate-x-0.5">
-                            →
-                          </span>
-                        </button>
-
-                        <div className="flex items-center gap-2.5">
-                          {project.liveUrl && (
-                            <a
-                              href={project.liveUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-narrow text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-0.5 group/link"
-                            >
-                              <span>Live</span>
-                              <span className="inline-block transition-transform duration-200 group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5">
-                                ↗
-                              </span>
-                            </a>
+                              <div className="flex justify-between items-center pt-1 border-t border-neutral-800/40">
+                                <span className="font-mono text-[8px] text-neutral-500">
+                                  v// {project.year}
+                                </span>
+                                <span className="text-[10px] text-neutral-400">
+                                  →
+                                </span>
+                              </div>
+                            </div>
                           )}
+                        </div>
 
-                          {project.isPrivate ? (
-                            <span
-                              className="font-narrow text-[11px] text-neutral-500 flex items-center gap-1 cursor-not-allowed select-none"
-                              title="Repository berstatus private (NDA)"
-                            >
-                              <svg className="w-2.5 h-2.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                              </svg>
-                              <span>NDA</span>
+                        {/* Project Title & Description */}
+                        <h3 className="font-narrow text-lg font-normal tracking-tight text-neutral-100 mb-1.5 group-hover:text-blue-400 dark:group-hover:text-blue-400 light:group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
+                          <span className="truncate">{project.title}</span>
+                          {project.isPrivate && (
+                            <span className="text-[9px] text-neutral-500 font-mono font-normal shrink-0">
+                              (private)
                             </span>
-                          ) : project.githubUrl ? (
-                            <a
-                              href={project.githubUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-narrow text-xs text-neutral-400 hover:text-neutral-200 flex items-center gap-0.5"
+                          )}
+                        </h3>
+                        <p className="font-sans text-xs text-neutral-400 dark:text-neutral-400 light:text-neutral-600 leading-relaxed mb-4 line-clamp-2">
+                          {project.description}
+                        </p>
+                      </div>
+
+                      {/* Footer: Tech Stack & Action Links */}
+                      <div>
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {project.techStack.slice(0, 3).map((tag) => (
+                            <span
+                              key={tag}
+                              className="font-narrow text-[10px] px-1.5 py-0.5 bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-200 text-neutral-400 border border-neutral-800 truncate max-w-[110px]"
                             >
-                              <span>GitHub</span>
-                              <span>↗</span>
-                            </a>
-                          ) : null}
+                              {tag}
+                            </span>
+                          ))}
+                          {project.techStack.length > 3 && (
+                            <span className="font-narrow text-[9px] px-1 py-0.5 text-neutral-500">
+                              +{project.techStack.length - 3}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
-                  </motion.article>
+                  </article>
                 ))}
+
+                {/* Dummy empty cells saat awal (mode dense banyak kotak) */}
+                {!isGridExpanded &&
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <div
+                      key={`dense-cell-${i}`}
+                      className="border-r border-b border-neutral-800/80 dark:border-neutral-800/80 light:border-neutral-300 min-h-[100px] sm:min-h-[120px] bg-neutral-900/10 pointer-events-none"
+                    />
+                  ))}
               </div>
             </motion.div>
           ) : (

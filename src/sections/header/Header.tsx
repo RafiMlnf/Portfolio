@@ -13,6 +13,7 @@ const navItems = [
   { name: "Experience", href: "#experiences" },
   { name: "Skills", href: "#skills" },
   { name: "Projects", href: "#projects" },
+  { name: "Contact", href: "#footer" },
 ];
 
 export default function Header() {
@@ -87,14 +88,6 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-4 ml-auto font-narrow">
-          <div className="hidden md:block">
-            <a
-              href="#footer"
-              className="px-4 py-1.5 text-sm rounded-full transition-opacity lowercase bg-white text-black dark:bg-white dark:text-black light:bg-neutral-900 light:text-white hover:opacity-80"
-            >
-              contact
-            </a>
-          </div>
 
           <button
             type="button"
@@ -177,13 +170,6 @@ export default function Header() {
               {item.name}
             </a>
           ))}
-          <a
-            href="#footer"
-            onClick={() => setIsOpen(false)}
-            className="w-full text-center px-4 py-2 text-sm text-black bg-white dark:text-black dark:bg-white light:text-white light:bg-black rounded-full transition-opacity lowercase"
-          >
-            contact
-          </a>
         </div>
       )}
     </motion.header>

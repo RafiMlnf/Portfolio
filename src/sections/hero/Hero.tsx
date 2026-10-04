@@ -4,48 +4,96 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from "motion/react";
-import starImg from "@/assets/star.png";
-import OptionWheel from "@/components/OptionWheel";
+import starImg from "@/assets/star.webp";
 
 interface SongData {
   title: string;
   videoSrc?: string;   // path ke file lokal di /public/videos/
+  bpm?: number;
+  startTime?: number;  // detik awal pemutaran
 }
 
 const songDataList: SongData[] = [
-  { title: "Arteri",  videoSrc: "/videos/arteri.mp4" },
-  { title: "Gravits", videoSrc: "/videos/gravits.mp4" },
-  { title: "Tek It", videoSrc: "/videos/tekit.mp4" },
-  { title: "Telenovia", videoSrc: "/videos/telenovia.mp4" },
-  { title: "Egosentris" },
-  { title: "Jigsaw Falling Into Place", videoSrc: "/videos/jigsaw.mp4" },
-  { title: "La Novela" },
+  { title: "Arteri",  videoSrc: "/videos/arteri.mp4", bpm: 182 },
+  { title: "Gravits", videoSrc: "/videos/gravits.mp4", bpm: 151.2 },
+  { title: "Bayangkan jika kita tidak menyerah", videoSrc: "/videos/bayangkan.mp4", bpm: 144, startTime: 129 },
+  { title: "Telenovia", videoSrc: "/videos/telenovia.mp4", bpm: 161 },
+  { title: "Egosentris", bpm: 128 },
+  { title: "Jigsaw Falling Into Place", videoSrc: "/videos/jigsaw.mp4", bpm: 166 },
+  { title: "La Novela", bpm: 118 },
 ];
 
 const songItems = songDataList.map((s) => s.title);
 
 const Prism = dynamic(() => import("@/components/Prism"), { ssr: false });
 const Noise = dynamic(() => import("@/components/Noise"), { ssr: false });
+const OptionWheel = dynamic(() => import("@/components/OptionWheel"), { ssr: false });
 
 export default function Hero() {
-  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
   const [isWheelOpen, setIsWheelOpen] = useState(false);
   const [selectedSongIdx, setSelectedSongIdx] = useState(0);
   const [isVideoSwitching, setIsVideoSwitching] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isGlitching, setIsGlitching] = useState(false);
+  const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
 
   const closeTimerRef     = useRef<NodeJS.Timeout | null>(null);
   const videoFadeTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const fadeTimerRef      = useRef<NodeJS.Timeout | null>(null);
+  const fadeTimerRef      = useRef<NodeJS.Timeout | null>(null); // delayed pause timer
+  const glitchTimerRef    = useRef<NodeJS.Timeout | null>(null); // 5s glitch trigger timer for Gravits
+  const glitchEndTimerRef = useRef<NodeJS.Timeout | null>(null); // glitch duration end timer
+  const playTokenRef      = useRef(0);                            // invalidates stale async playback callbacks
+  const readyHandlerRef   = useRef<(() => void) | null>(null);   // pending canplay listener
 
   // Single video element + Web Audio
   const videoRef       = useRef<HTMLVideoElement | null>(null);
   const audioCtxRef    = useRef<AudioContext | null>(null);
   const gainRef        = useRef<GainNode | null>(null);
+  const analyserRef    = useRef<AnalyserNode | null>(null);
   const sourceRef      = useRef<MediaElementAudioSourceNode | null>(null);
   const currentSrcRef  = useRef<string>("");
+  const sectionRef     = useRef<HTMLElement | null>(null);
+  const isVisibleRef   = useRef<boolean>(true);
 
   const currentSong = songDataList[selectedSongIdx];
+  const currentBpm = currentSong?.bpm ?? 182;
+  // 60 / BPM = duration per beat in seconds (e.g. 182 BPM = 0.3297s, 151.2 BPM = 0.3968s)
+  const beatDurationSeconds = (60 / currentBpm).toFixed(4);
+
+  /* ── Viewport Intersection Observer: suspend playback & GPU when offscreen ── */
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const visible = entry.isIntersecting;
+        isVisibleRef.current = visible;
+        if (!visible) {
+          // Offscreen: pause video immediately to free GPU decoding threads
+          const video = videoRef.current;
+          if (video && !video.paused) {
+            video.pause();
+          }
+          if (audioCtxRef.current?.state === "running") {
+            audioCtxRef.current.suspend().catch(() => {});
+          }
+          setIsPlaying(false);
+        } else {
+          // Back into view: resume if wheel is still open
+          if (isWheelOpen && videoRef.current && currentSong?.videoSrc) {
+            resumeCtx();
+            videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+          }
+        }
+      },
+      { threshold: 0.05 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isWheelOpen, currentSong?.videoSrc]);
 
   /* ── Web Audio helpers ───────────────────────────────── */
   const ensureAudioCtx = () => {
@@ -54,7 +102,7 @@ export default function Hero() {
     if (!Ctx) return;
     const ctx = new Ctx();
     const gain = ctx.createGain();
-    gain.gain.value = 0;
+    gain.gain.value = 0.85;
     gain.connect(ctx.destination);
     audioCtxRef.current = ctx;
     gainRef.current = gain;
@@ -67,8 +115,14 @@ export default function Hero() {
     if (!video || !ctx || !gain || sourceRef.current) return;
     try {
       const src = ctx.createMediaElementSource(video);
-      src.connect(gain);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.4;
+      src.connect(analyser);
+      analyser.connect(gain);
       sourceRef.current = src;
+      analyserRef.current = analyser;
+      setAnalyserNode(analyser);
     } catch {}
   };
 
@@ -79,95 +133,147 @@ export default function Hero() {
   };
 
   /* ── Volume fade via native Web Audio scheduling (zero JS CPU) ── */
-  const fadeGain = (target: number, ms: number, onDone?: () => void) => {
-    if (fadeTimerRef.current) { clearTimeout(fadeTimerRef.current); fadeTimerRef.current = null; }
+  const fadeGain = (target: number, ms: number) => {
     const gain = gainRef.current;
     const ctx = audioCtxRef.current;
-    if (!gain || !ctx) { onDone?.(); return; }
-    const now = ctx.currentTime;
-    gain.gain.cancelScheduledValues(now);
-    gain.gain.setValueAtTime(gain.gain.value, now);
-    gain.gain.linearRampToValueAtTime(target, now + ms / 1000);
-    if (onDone) fadeTimerRef.current = setTimeout(onDone, ms);
+    if (gain && ctx && sourceRef.current) {
+      try {
+        const now = ctx.currentTime;
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.linearRampToValueAtTime(target, now + ms / 1000);
+      } catch {
+        gain.gain.value = target;
+      }
+    } else if (videoRef.current) {
+      // Fallback when Web Audio graph isn't connected
+      videoRef.current.volume = Math.max(0, Math.min(1, target));
+    }
+  };
+
+  const clearPending = () => {
+    if (fadeTimerRef.current) { clearTimeout(fadeTimerRef.current); fadeTimerRef.current = null; }
+    if (glitchTimerRef.current) { clearTimeout(glitchTimerRef.current); glitchTimerRef.current = null; }
+    if (glitchEndTimerRef.current) { clearTimeout(glitchEndTimerRef.current); glitchEndTimerRef.current = null; }
+    setIsGlitching(false);
+    const video = videoRef.current;
+    if (video && readyHandlerRef.current) {
+      video.removeEventListener("canplay", readyHandlerRef.current);
+      readyHandlerRef.current = null;
+    }
+  };
+
+  /* Try unmuted play; retry on AbortError; fall back to muted + unmute on first gesture */
+  const startPlayback = (video: HTMLVideoElement, fadeDur: number, token: number, startAt = 0) => {
+    try { video.currentTime = startAt; } catch {}
+    const onOk = () => {
+      if (token !== playTokenRef.current) return;
+      setIsPlaying(true);
+      resumeCtx();
+      fadeGain(0.85, fadeDur);
+    };
+    const tryPlay = (retries: number) => {
+      if (token !== playTokenRef.current) return;
+      video.muted = false;
+      resumeCtx();
+      video.play().then(onOk).catch((err: { name?: string }) => {
+        if (token !== playTokenRef.current) return;
+        if (err?.name === "AbortError" && retries > 0) {
+          setTimeout(() => tryPlay(retries - 1), 80);
+          return;
+        }
+        video.muted = true;
+        video.play()
+          .then(() => {
+            if (token !== playTokenRef.current) return;
+            setIsPlaying(true);
+            const unmute = () => {
+              if (token !== playTokenRef.current) return;
+              resumeCtx();
+              video.muted = false;
+              fadeGain(0.85, 300);
+            };
+            window.addEventListener("pointerdown", unmute, { once: true, passive: true });
+          })
+          .catch(() => { if (token === playTokenRef.current) setIsPlaying(false); });
+      });
+    };
+    tryPlay(2);
   };
 
   /* ── Playback ────────────────────────────────────────── */
   const playSong = (song: SongData, fadeDur = 500) => {
     const video = videoRef.current;
-    if (!song?.videoSrc || !video) return;
+    if (!song?.videoSrc || !video || !isVisibleRef.current) return;
+
+    const token = ++playTokenRef.current;
+    clearPending();
 
     ensureAudioCtx();
     connectSource();
     resumeCtx();
 
-    // Ganti src hanya jika lagu berubah
+    // Trigger fast screen glitch, slicing & invert 4.7s after Gravits playback starts (0.7s duration)
+    if (song.title.toLowerCase() === "gravits") {
+      glitchTimerRef.current = setTimeout(() => {
+        if (token !== playTokenRef.current) return;
+        setIsGlitching(true);
+        glitchEndTimerRef.current = setTimeout(() => {
+          setIsGlitching(false);
+        }, 700);
+      }, 4700);
+    }
+
     if (currentSrcRef.current !== song.videoSrc) {
       currentSrcRef.current = song.videoSrc;
       setVideoReady(false);
       video.src = song.videoSrc;
       video.load();
 
-      // Tunggu video siap sebelum play — tidak ada blank frame
       const onReady = () => {
         video.removeEventListener("canplay", onReady);
+        if (readyHandlerRef.current === onReady) readyHandlerRef.current = null;
+        if (token !== playTokenRef.current) return;
         setVideoReady(true);
-        video.muted = false;
-        resumeCtx();
-        video.play()
-          .then(() => fadeGain(0.85, fadeDur))
-          .catch(() => {
-            // Autoplay dicegah atau audioctx suspended, coba lagi setelah resume
-            resumeCtx();
-            video.muted = false;
-            video.play()
-              .then(() => fadeGain(0.85, fadeDur))
-              .catch(() => {
-                video.muted = true;
-                video.play().catch(() => {});
-              });
-          });
+        startPlayback(video, fadeDur, token, song.startTime ?? 0);
       };
-      video.addEventListener("canplay", onReady, { once: true });
+      if (video.readyState >= 3) {
+        onReady();
+      } else {
+        readyHandlerRef.current = onReady;
+        video.addEventListener("canplay", onReady);
+      }
     } else {
-      // Src sudah sama — langsung play dari awal
-      video.currentTime = 0;
       setVideoReady(true);
-      video.muted = false;
-      resumeCtx();
-      video.play()
-        .then(() => fadeGain(0.85, fadeDur))
-        .catch(() => {
-          resumeCtx();
-          video.muted = false;
-          video.play()
-            .then(() => fadeGain(0.85, fadeDur))
-            .catch(() => {
-              video.muted = true;
-              video.play().catch(() => {});
-            });
-        });
+      startPlayback(video, fadeDur, token, song.startTime ?? 0);
     }
   };
 
   const stopSong = (fadeDur = 400, onDone?: () => void) => {
-    fadeGain(0, fadeDur, () => {
+    ++playTokenRef.current;
+    clearPending();
+    setIsPlaying(false);
+    fadeGain(0, fadeDur);
+    const token = playTokenRef.current;
+    fadeTimerRef.current = setTimeout(() => {
+      fadeTimerRef.current = null;
+      if (token !== playTokenRef.current) return;
       const video = videoRef.current;
       if (video) {
         video.pause();
-        video.currentTime = 0;
+        try { video.currentTime = 0; } catch {}
       }
       setVideoReady(false);
       onDone?.();
-    });
+    }, fadeDur);
   };
 
-  /* ── Lifecycle: unlock audio + preload on first gesture ── */
+  /* ── Lifecycle: unlock audio context on first gesture + preload first video ── */
   useEffect(() => {
     const unlock = () => {
       ensureAudioCtx();
       resumeCtx();
       connectSource();
-      // Eagerly preload first song so hover is instant
       const video = videoRef.current;
       const first = songDataList.find((s) => s.videoSrc);
       if (video && first?.videoSrc && !currentSrcRef.current) {
@@ -178,9 +284,11 @@ export default function Hero() {
     };
     window.addEventListener("pointerdown", unlock, { once: true, passive: true });
     window.addEventListener("keydown", unlock, { once: true, passive: true });
+    window.addEventListener("touchstart", unlock, { once: true, passive: true });
     return () => {
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
+      window.removeEventListener("touchstart", unlock);
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
       try { audioCtxRef.current?.close(); } catch {}
     };
@@ -189,6 +297,9 @@ export default function Hero() {
   /* ── Event handlers ──────────────────────────────────── */
   const handleMouseEnter = () => {
     if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+    ensureAudioCtx();
+    resumeCtx();
+    connectSource();
     setIsWheelOpen(true);
     playSong(currentSong);
   };
@@ -201,12 +312,13 @@ export default function Hero() {
 
   const toggleWheel = () => {
     if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
-    setIsWheelOpen((prev) => {
-      const next = !prev;
-      if (next) playSong(currentSong);
-      else      stopSong();
-      return next;
-    });
+    ensureAudioCtx();
+    resumeCtx();
+    connectSource();
+    const next = !isWheelOpen;
+    setIsWheelOpen(next);
+    if (next) playSong(currentSong);
+    else      stopSong();
   };
 
   const handleSongChange = (index: number) => {
@@ -249,30 +361,41 @@ export default function Hero() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [mouseX, mouseY]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentY = window.scrollY || window.pageYOffset;
-      setShowScrollIndicator(currentY > 20 && currentY < 550);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToProfile = () => {
-    document.getElementById("profile")?.scrollIntoView({ behavior: "smooth" });
-  };
-
   return (
     <section
+      ref={sectionRef}
       id="hero"
       className="sticky top-0 w-full h-screen min-h-[650px] flex items-center justify-center overflow-hidden z-0"
     >
+      {/* Full-screen negative (inverted colors) strobe during glitch */}
+      {isGlitching && <div className="glitch-negative-flash" aria-hidden="true" />}
+
+      {/* Convex blurry side screens */}
+      <div className={`hero-side-bulge left ${isGlitching ? "screen-glitch-active" : ""}`} aria-hidden="true" />
+      <div className={`hero-side-bulge right ${isGlitching ? "screen-glitch-active" : ""}`} aria-hidden="true" />
+
       {/* Centered Boxed Canvas with Left and Right borders */}
-      <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+      <div className={`absolute inset-0 z-0 flex items-center justify-center pointer-events-none transition-transform ${
+        isGlitching ? "screen-glitch-active" : ""
+      }`}>
         <div className="relative w-full max-w-5xl h-full border-x border-neutral-800/80 dark:border-neutral-800/80 light:border-neutral-200 overflow-hidden pointer-events-auto">
-          {/* Prism WebGL canvas */}
-          <div className="absolute inset-0 w-full h-full">
+          {/* Rapid Glitch Scanline Burst & Slicing Overlays */}
+          {isGlitching && (
+            <>
+              <div className="glitch-overlay-flash" aria-hidden="true" />
+              <div className="glitch-slice-container" aria-hidden="true">
+                <div className="glitch-slice-bar-1" />
+                <div className="glitch-slice-bar-2" />
+                <div className="glitch-slice-bar-3" />
+                <div className="glitch-slice-bar-4" />
+                <div className="glitch-slice-bar-5" />
+                <div className="glitch-slice-bar-6" />
+              </div>
+            </>
+          )}
+
+          {/* Prism WebGL canvas (invert color strobe during glitch) */}
+          <div className={`absolute inset-0 w-full h-full ${isGlitching ? "prism-glitch-invert" : ""}`}>
             <Prism
               height={4.5}
               baseWidth={7.0}
@@ -288,6 +411,7 @@ export default function Hero() {
               bloom={1}
               bulge={0.8}
               timeScale={0.5}
+              suspendWhenOffscreen={true}
             />
           </div>
 
@@ -303,10 +427,8 @@ export default function Hero() {
             <video
               ref={videoRef}
               loop
-              muted
               playsInline
               preload="auto"
-              crossOrigin="anonymous"
               className="prism-video-el"
             />
           </div>
@@ -341,11 +463,7 @@ export default function Hero() {
               : "text-neutral-400 dark:text-neutral-400 light:text-neutral-600 border-neutral-700/60 dark:border-neutral-700/60 light:border-neutral-300 hover:text-white dark:hover:text-white light:hover:text-black hover:border-neutral-400 dark:hover:border-neutral-400 light:hover:border-neutral-600 hover:bg-neutral-800/80 dark:hover:bg-neutral-800/80 light:hover:bg-neutral-100"
           }`}
         >
-          <svg
-            className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
+          <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
           </svg>
         </button>
@@ -379,11 +497,21 @@ export default function Hero() {
       </motion.div>
 
       {/* Main title */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-8 md:px-12 pointer-events-auto">
+      <div className={`relative z-10 w-full max-w-5xl mx-auto px-8 md:px-12 pointer-events-auto ${
+        isGlitching ? "screen-glitch-active" : ""
+      }`}>
         <div className="w-full flex items-center justify-between gap-4">
           <motion.h1
-            style={{ y: yParallax, opacity: textOpacity }}
-            className="font-narrow text-5xl sm:text-7xl font-normal italic tracking-tight text-neutral-100 lowercase shrink-0"
+            style={
+              {
+                y: yParallax,
+                opacity: textOpacity,
+                "--beat-duration": `${beatDurationSeconds}s`,
+              } as unknown as React.CSSProperties
+            }
+            className={`font-narrow text-5xl sm:text-7xl font-normal italic tracking-tight text-neutral-100 lowercase shrink-0 transition-transform origin-left ${
+              isPlaying ? "beat-text-pulse" : ""
+            }`}
           >
             <span className="shaky-retro-text flicker-container">
               {"portfolio".split("").map((char, cIdx) => {
@@ -403,8 +531,16 @@ export default function Hero() {
           </motion.h1>
 
           <motion.span
-            style={{ y: yParallax, opacity: textOpacity }}
-            className="font-narrow text-5xl sm:text-7xl font-normal italic tracking-tight text-neutral-100 lowercase text-right shrink-0"
+            style={
+              {
+                y: yParallax,
+                opacity: textOpacity,
+                "--beat-duration": `${beatDurationSeconds}s`,
+              } as unknown as React.CSSProperties
+            }
+            className={`font-narrow text-5xl sm:text-7xl font-normal italic tracking-tight text-neutral-100 lowercase text-right shrink-0 transition-transform origin-right ${
+              isPlaying ? "beat-text-pulse" : ""
+            }`}
           >
             <span className="shaky-retro-text flicker-container">
               {"rafi".split("").map((char, cIdx) => {
@@ -425,33 +561,7 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <div
-        className={`absolute bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 z-20 pointer-events-auto transition-all duration-500 ease-out ${
-          showScrollIndicator ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8 pointer-events-none"
-        }`}
-      >
-        <button
-          type="button"
-          onClick={scrollToProfile}
-          className="group flex flex-col items-center cursor-pointer focus:outline-none p-3"
-          aria-label="Scroll to profile"
-        >
-          <div className="animate-bounce">
-            <svg
-              className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-white/50 group-hover:text-white/90 stroke-current group-hover:scale-110 transition-all duration-300"
-              viewBox="0 0 24 24"
-              fill="none"
-              strokeWidth="1"
-              strokeLinecap="butt"
-              strokeLinejoin="miter"
-              strokeMiterlimit="10"
-            >
-              <polyline points="4 8 12 16 20 8" />
-            </svg>
-          </div>
-        </button>
-      </div>
+
 
       {/* 4 Overlapping Blue Stars */}
       <motion.div

@@ -22,6 +22,7 @@ interface PrismProps {
   suspendWhenOffscreen?: boolean;
   timeScale?: number;
   lightMode?: boolean;
+  paused?: boolean;
 }
 
 const Prism = ({
@@ -42,8 +43,13 @@ const Prism = ({
   suspendWhenOffscreen = false,
   timeScale = 0.5,
   lightMode = false,
+  paused = false,
 }: PrismProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const rafControllerRef = useRef<{
+    start: () => void;
+    stop: () => void;
+  } | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -427,17 +433,32 @@ const Prism = ({
     if (suspendWhenOffscreen) {
       const io = new IntersectionObserver((entries) => {
         const vis = entries.some((e) => e.isIntersecting);
-        if (vis) startRAF();
-        else stopRAF();
+        if (vis) {
+          if (!paused) startRAF();
+        } else {
+          stopRAF();
+        }
       });
       io.observe(container);
-      startRAF();
+      if (!paused) startRAF();
       (container as unknown as { __prismIO?: IntersectionObserver }).__prismIO = io;
     } else {
-      startRAF();
+      if (!paused) startRAF();
     }
 
+    rafControllerRef.current = {
+      start: () => {
+        if (gl.canvas) gl.canvas.style.display = "block";
+        startRAF();
+      },
+      stop: () => {
+        stopRAF();
+        if (gl.canvas) gl.canvas.style.display = "none";
+      },
+    };
+
     return () => {
+      rafControllerRef.current = null;
       stopRAF();
       ro.disconnect();
       if (animationType === "hover") {
@@ -469,8 +490,15 @@ const Prism = ({
     inertia,
     bloom,
     suspendWhenOffscreen,
-    lightMode,
   ]);
+
+  useEffect(() => {
+    if (paused) {
+      rafControllerRef.current?.stop();
+    } else {
+      rafControllerRef.current?.start();
+    }
+  }, [paused]);
 
   return <div className="prism-container" ref={containerRef} />;
 };

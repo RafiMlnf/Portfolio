@@ -37,6 +37,7 @@ export default function Hero() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGlitching, setIsGlitching] = useState(false);
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
+  const [isOffscreen, setIsOffscreen] = useState(false);
 
   const closeTimerRef     = useRef<NodeJS.Timeout | null>(null);
   const videoFadeTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -61,39 +62,57 @@ export default function Hero() {
   // 60 / BPM = duration per beat in seconds (e.g. 182 BPM = 0.3297s, 151.2 BPM = 0.3968s)
   const beatDurationSeconds = (60 / currentBpm).toFixed(4);
 
-  /* ── Viewport Intersection Observer: suspend playback & GPU when offscreen ── */
+  const { scrollY } = useScroll();
+  const yParallax  = useTransform(scrollY, [0, 500], [0, -160]);
+  const textOpacity = useTransform(scrollY, [0, 420], [1, 0.05]);
+
+  /* ── Viewport Offscreen Detection: shuts down Prism WebGL, Noise & audio when scrolled past ── */
   useEffect(() => {
-    const el = sectionRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
+    const checkOffscreen = () => {
+      const heroH = sectionRef.current?.offsetHeight || window.innerHeight;
+      const currentScroll = window.scrollY || document.documentElement.scrollTop || 0;
+      const off = currentScroll >= heroH;
+      setIsOffscreen((prev) => (prev !== off ? off : prev));
+      isVisibleRef.current = !off;
+    };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const visible = entry.isIntersecting;
-        isVisibleRef.current = visible;
-        if (!visible) {
-          // Offscreen: pause video immediately to free GPU decoding threads
-          const video = videoRef.current;
-          if (video && !video.paused) {
-            video.pause();
-          }
-          if (audioCtxRef.current?.state === "running") {
-            audioCtxRef.current.suspend().catch(() => {});
-          }
-          setIsPlaying(false);
-        } else {
-          // Back into view: resume if wheel is still open
-          if (isWheelOpen && videoRef.current && currentSong?.videoSrc) {
-            resumeCtx();
-            videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-          }
-        }
-      },
-      { threshold: 0.05 }
-    );
+    checkOffscreen();
+    window.addEventListener("scroll", checkOffscreen, { passive: true });
+    window.addEventListener("resize", checkOffscreen, { passive: true });
 
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [isWheelOpen, currentSong?.videoSrc]);
+    const unsub = scrollY.on("change", (latest) => {
+      const heroH = sectionRef.current?.offsetHeight || window.innerHeight;
+      const off = latest >= heroH;
+      setIsOffscreen((prev) => (prev !== off ? off : prev));
+      isVisibleRef.current = !off;
+    });
+
+    return () => {
+      window.removeEventListener("scroll", checkOffscreen);
+      window.removeEventListener("resize", checkOffscreen);
+      unsub();
+    };
+  }, [scrollY]);
+
+  /* ── Stop/pause video & audio when offscreen, resume when back in view ── */
+  useEffect(() => {
+    if (isOffscreen) {
+      const video = videoRef.current;
+      if (video && !video.paused) {
+        video.pause();
+      }
+      if (audioCtxRef.current?.state === "running") {
+        audioCtxRef.current.suspend().catch(() => {});
+      }
+      setIsPlaying(false);
+      clearPending();
+    } else {
+      if (isWheelOpen && videoRef.current && currentSong?.videoSrc) {
+        resumeCtx();
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      }
+    }
+  }, [isOffscreen, isWheelOpen, currentSong?.videoSrc]);
 
   /* ── Web Audio helpers ───────────────────────────────── */
   const ensureAudioCtx = () => {
@@ -345,12 +364,9 @@ export default function Hero() {
   const smoothMouseX = useSpring(mouseX, springConfig);
   const smoothMouseY = useSpring(mouseY, springConfig);
 
-  const { scrollY } = useScroll();
-  const yParallax  = useTransform(scrollY, [0, 500], [0, -160]);
-  const textOpacity = useTransform(scrollY, [0, 420], [1, 0.05]);
-
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      if (isOffscreen) return;
       const { innerWidth, innerHeight } = window;
       const nx = (e.clientX - innerWidth  * 0.5) / (innerWidth  * 0.5);
       const ny = (e.clientY - innerHeight * 0.5) / (innerHeight * 0.5);
@@ -359,7 +375,7 @@ export default function Hero() {
     };
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [mouseX, mouseY]);
+  }, [mouseX, mouseY, isOffscreen]);
 
   return (
     <section
@@ -368,19 +384,19 @@ export default function Hero() {
       className="sticky top-0 w-full h-screen min-h-[650px] flex items-center justify-center overflow-hidden z-0"
     >
       {/* Full-screen negative (inverted colors) strobe during glitch */}
-      {isGlitching && <div className="glitch-negative-flash" aria-hidden="true" />}
+      {isGlitching && !isOffscreen && <div className="glitch-negative-flash" aria-hidden="true" />}
 
-      {/* Convex blurry side screens */}
-      <div className={`hero-side-bulge left ${isGlitching ? "screen-glitch-active" : ""}`} aria-hidden="true" />
-      <div className={`hero-side-bulge right ${isGlitching ? "screen-glitch-active" : ""}`} aria-hidden="true" />
+      {/* Convex blurry side screens (hidden when offscreen to free GPU compositor) */}
+      <div className={`hero-side-bulge left ${isGlitching ? "screen-glitch-active" : ""} ${isOffscreen ? "hidden" : ""}`} aria-hidden="true" />
+      <div className={`hero-side-bulge right ${isGlitching ? "screen-glitch-active" : ""} ${isOffscreen ? "hidden" : ""}`} aria-hidden="true" />
 
       {/* Centered Boxed Canvas with Left and Right borders */}
       <div className={`absolute inset-0 z-0 flex items-center justify-center pointer-events-none transition-transform ${
         isGlitching ? "screen-glitch-active" : ""
-      }`}>
+      } ${isOffscreen ? "invisible opacity-0" : ""}`} aria-hidden={isOffscreen}>
         <div className="relative w-full max-w-5xl h-full border-x border-neutral-800/80 dark:border-neutral-800/80 light:border-neutral-200 overflow-hidden pointer-events-auto">
           {/* Rapid Glitch Scanline Burst & Slicing Overlays */}
-          {isGlitching && (
+          {isGlitching && !isOffscreen && (
             <>
               <div className="glitch-overlay-flash" aria-hidden="true" />
               <div className="glitch-slice-container" aria-hidden="true">
@@ -412,13 +428,14 @@ export default function Hero() {
               bulge={0.8}
               timeScale={0.5}
               suspendWhenOffscreen={true}
+              paused={isOffscreen}
             />
           </div>
 
           {/* Single video element — canplay-gated, no multi-element overhead */}
           <div
             className={`prism-video-ambient transition-opacity duration-500 ease-in-out ${
-              isWheelOpen && videoReady && currentSong?.videoSrc && !isVideoSwitching
+              !isOffscreen && isWheelOpen && videoReady && currentSong?.videoSrc && !isVideoSwitching
                 ? "opacity-40"
                 : "opacity-0 pointer-events-none"
             }`}
@@ -441,6 +458,7 @@ export default function Hero() {
               patternScaleY={1}
               patternRefreshInterval={2}
               patternAlpha={15}
+              paused={isOffscreen}
             />
           </div>
         </div>
@@ -451,7 +469,7 @@ export default function Hero() {
         style={{ y: yParallax, opacity: textOpacity }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="absolute left-3 sm:left-5 md:left-6 top-1/2 -translate-y-1/2 z-30 pointer-events-auto flex items-center"
+        className={`absolute left-3 sm:left-5 md:left-6 top-1/2 -translate-y-1/2 z-30 pointer-events-auto flex items-center ${isOffscreen ? "pointer-events-none invisible" : ""}`}
       >
         <button
           type="button"
@@ -566,7 +584,7 @@ export default function Hero() {
       {/* 4 Overlapping Blue Stars */}
       <motion.div
         style={{ x: smoothMouseX, y: smoothMouseY }}
-        className="absolute bottom-14 sm:bottom-16 md:bottom-20 right-10 sm:right-16 md:right-20 lg:right-24 z-20 flex items-center select-none pointer-events-auto"
+        className={`absolute bottom-14 sm:bottom-16 md:bottom-20 right-10 sm:right-16 md:right-20 lg:right-24 z-20 flex items-center select-none ${isOffscreen ? "pointer-events-none invisible" : "pointer-events-auto"}`}
       >
         {[0, 1, 2, 3].map((index) => (
           <motion.div

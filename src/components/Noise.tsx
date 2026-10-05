@@ -9,6 +9,7 @@ interface NoiseProps {
   patternScaleY?: number;
   patternRefreshInterval?: number;
   patternAlpha?: number;
+  paused?: boolean;
 }
 
 const Noise = ({
@@ -17,6 +18,7 @@ const Noise = ({
   patternScaleY = 1,
   patternRefreshInterval = 2,
   patternAlpha = 15,
+  paused = false,
 }: NoiseProps) => {
   const grainRef = useRef<HTMLCanvasElement>(null);
 
@@ -65,13 +67,15 @@ const Noise = ({
 
     window.addEventListener("resize", resize);
     resize();
-    loop();
+    if (!paused) {
+      loop();
+    }
 
     return () => {
       window.removeEventListener("resize", resize);
-      window.cancelAnimationFrame(animationId);
+      if (animationId) window.cancelAnimationFrame(animationId);
     };
-  }, [patternSize, patternScaleX, patternScaleY, patternRefreshInterval, patternAlpha]);
+  }, [patternSize, patternScaleX, patternScaleY, patternRefreshInterval, patternAlpha, paused]);
 
   return (
     <canvas

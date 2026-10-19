@@ -19,7 +19,6 @@ export const metadata: Metadata = {
 };
 
 import SmoothScroll from "@/components/SmoothScroll";
-import CursorTrackerGrid from "@/components/CursorTrackerGrid";
 
 export default function RootLayout({
   children,
@@ -30,7 +29,6 @@ export default function RootLayout({
     <html lang="en" className={`${ebGaramond.variable} ${poppins.variable} dark`} suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen">
         <SmoothScroll />
-        <CursorTrackerGrid />
         {children}
       </body>
     </html>

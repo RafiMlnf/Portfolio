@@ -464,6 +464,82 @@ export default function Hero() {
         </div>
       </div>
 
+      {/* Circular Rotating Star Ring in Center of Hero */}
+      <div
+        className={`absolute inset-0 z-15 flex items-center justify-center pointer-events-none select-none transition-opacity duration-300 ${
+          isOffscreen ? "invisible opacity-0" : "opacity-100"
+        }`}
+        aria-hidden="true"
+      >
+        <motion.div
+          style={{ x: smoothMouseX, y: smoothMouseY }}
+          className="relative w-[280px] h-[280px] sm:w-[340px] sm:h-[340px] md:w-[400px] md:h-[400px] flex items-center justify-center"
+        >
+          {/* Subtle orbiting guide circle */}
+          <div className="absolute inset-2 sm:inset-4 rounded-full border border-neutral-700/20 dark:border-neutral-700/20 light:border-neutral-300/30" />
+
+          {/* Rotating Ring Container */}
+          <div className="star-orbit-ring absolute inset-0">
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((idx) => {
+              const count = 8;
+              const angleDeg = (idx / count) * 360;
+              const angleRad = (angleDeg * Math.PI) / 180;
+              // Radius proporsional (~46% dari setengah ukuran container)
+              // Menggunakan kalkulasi posisi persentase
+              const radiusPercent = 46; 
+              const leftPercent = 50 + radiusPercent * Math.cos(angleRad);
+              const topPercent = 50 + radiusPercent * Math.sin(angleRad);
+
+              return (
+                <div
+                  key={idx}
+                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{
+                    left: `${leftPercent}%`,
+                    top: `${topPercent}%`,
+                  }}
+                >
+                  {/* Counter-rotation to keep stars oriented gracefully */}
+                  <div className="star-orbit-counter relative w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 transition-transform duration-200 hover:scale-125">
+                    {/* Outer white accent layer */}
+                    <div
+                      className="absolute inset-0 scale-110 opacity-90"
+                      style={{
+                        backgroundColor: "#ffffff",
+                        maskImage: `url(${starImg.src})`,
+                        WebkitMaskImage: `url(${starImg.src})`,
+                        maskSize: "contain",
+                        WebkitMaskSize: "contain",
+                        maskRepeat: "no-repeat",
+                        WebkitMaskRepeat: "no-repeat",
+                        maskPosition: "center",
+                        WebkitMaskPosition: "center",
+                        filter: "drop-shadow(0 0 6px rgba(0, 120, 255, 0.5))",
+                      }}
+                    />
+                    {/* Inner deep blue layer */}
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        backgroundColor: "#0000bd",
+                        maskImage: `url(${starImg.src})`,
+                        WebkitMaskImage: `url(${starImg.src})`,
+                        maskSize: "contain",
+                        WebkitMaskSize: "contain",
+                        maskRepeat: "no-repeat",
+                        WebkitMaskRepeat: "no-repeat",
+                        maskPosition: "center",
+                        WebkitMaskPosition: "center",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      </div>
+
       {/* Music icon + OptionWheel */}
       <motion.div
         style={{ y: yParallax, opacity: textOpacity }}

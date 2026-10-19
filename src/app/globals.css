@@ -249,6 +249,37 @@ html.light .shaky-retro-text {
   }
 }
 
+/* Circular Orbiting Stars Formation */
+@keyframes star-orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes star-counter-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.star-orbit-ring {
+  animation: star-orbit-spin 26s linear infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.star-orbit-counter {
+  animation: star-counter-spin 26s linear infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
 /* Star Periodic Appearance with Invert Flash & Left-to-Right Wave */
 .star-flicker-item {
   opacity: 0;
@@ -547,83 +578,6 @@ html.light .shaky-retro-text {
   transform: scaleX(-1);
   -webkit-mask-image: radial-gradient(ellipse 90px 70% at 100% 50%, transparent 97%, #000 100%);
   mask-image: radial-gradient(ellipse 90px 70% at 100% 50%, transparent 97%, #000 100%);
-}
-
-/* -- Cursor Tracker Grid Flickering Effect (Rapid Sharp Strobe with Dynamic Shape Variation) -- */
-@keyframes cursor-grid-flicker {
-  /* Flick 1: Kotak Presisi 1:1 */
-  0%, 16% {
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1, 1);
-  }
-  16.1%, 19% {
-    opacity: 0;
-    visibility: hidden;
-  }
-  /* Flick 2: Sedikit Persegi Panjang Horizontal (Wide) */
-  19.1%, 36% {
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1.35, 0.85);
-  }
-  36.1%, 40% {
-    opacity: 0;
-    visibility: hidden;
-  }
-  /* Flick 3: Kotak Presisi 1:1 */
-  40.1%, 58% {
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1, 1);
-  }
-  58.1%, 62% {
-    opacity: 0;
-    visibility: hidden;
-  }
-  /* Flick 4: Sedikit Persegi Panjang Vertikal (Tall) */
-  62.1%, 78% {
-    opacity: 1;
-    visibility: visible;
-    transform: scale(0.85, 1.3);
-  }
-  78.1%, 82% {
-    opacity: 0;
-    visibility: hidden;
-  }
-  /* Flick 5: Kotak Sedikit Persegi Panjang Horizontal Ringan */
-  82.1%, 96% {
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1.2, 0.95);
-  }
-  96.1%, 100% {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
-.cursor-grid-flicker {
-  animation: cursor-grid-flicker 0.42s steps(1) infinite;
-  transform-origin: center center;
-  will-change: opacity, visibility, transform;
-}
-
-/* -- Cursor Connector Track Line (Fixed Angled Solid Track Lines / Blending) -- */
-.cursor-connector-canvas {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 39;
-  mix-blend-mode: screen;
-}
-
-.cursor-track-segment {
-  position: absolute;
-  height: 0.5px;
-  background-color: rgba(255, 255, 255, 0.45);
-  transform-origin: 0 50%;
-  pointer-events: none;
 }
 
 /* -- 4-Sided Fence Grid Pattern for Project Detail Modal -- */

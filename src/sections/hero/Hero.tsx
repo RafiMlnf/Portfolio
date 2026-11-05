@@ -381,8 +381,12 @@ export default function Hero() {
     <section
       ref={sectionRef}
       id="hero"
+      data-offscreen={isOffscreen ? "true" : "false"}
       className="sticky top-0 w-full h-screen min-h-[650px] flex items-center justify-center overflow-hidden z-0"
     >
+      {/* Subtle Ambient Screen Glow outside the central frame */}
+      {!isOffscreen && <div className="ambient-screen-glow" aria-hidden="true" />}
+
       {/* Full-screen negative (inverted colors) strobe during glitch */}
       {isGlitching && !isOffscreen && <div className="glitch-negative-flash" aria-hidden="true" />}
 
@@ -412,6 +416,7 @@ export default function Hero() {
 
           {/* Prism WebGL canvas (invert color strobe during glitch) */}
           <div className={`absolute inset-0 w-full h-full ${isGlitching ? "prism-glitch-invert" : ""}`}>
+            {!isOffscreen && (
             <Prism
               height={4.5}
               baseWidth={7.0}
@@ -430,6 +435,7 @@ export default function Hero() {
               suspendWhenOffscreen={true}
               paused={isOffscreen}
             />
+            )}
           </div>
 
           {/* Single video element — canplay-gated, no multi-element overhead */}
@@ -464,7 +470,7 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Circular Rotating Star Ring in Center of Hero */}
+      {/* Circular Rotating Stars in Center of Hero (Sequential Fade-in / Fade-out) */}
       <div
         className={`absolute inset-0 z-15 flex items-center justify-center pointer-events-none select-none transition-opacity duration-300 ${
           isOffscreen ? "invisible opacity-0" : "opacity-100"
@@ -475,10 +481,7 @@ export default function Hero() {
           style={{ x: smoothMouseX, y: smoothMouseY }}
           className="relative w-[280px] h-[280px] sm:w-[340px] sm:h-[340px] md:w-[400px] md:h-[400px] flex items-center justify-center"
         >
-          {/* Subtle orbiting guide circle */}
-          <div className="absolute inset-2 sm:inset-4 rounded-full border border-neutral-700/20 dark:border-neutral-700/20 light:border-neutral-300/30" />
-
-          {/* Rotating Ring Container */}
+          {/* Rotating Ring Container without border ring */}
           <div className="star-orbit-ring absolute inset-0">
             {[0, 1, 2, 3, 4, 5, 6, 7].map((idx) => {
               const count = 8;
@@ -493,11 +496,14 @@ export default function Hero() {
               return (
                 <div
                   key={idx}
-                  className="absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{
-                    left: `${leftPercent}%`,
-                    top: `${topPercent}%`,
-                  }}
+                  className="star-sequential-item absolute -translate-x-1/2 -translate-y-1/2"
+                  style={
+                    {
+                      left: `${leftPercent}%`,
+                      top: `${topPercent}%`,
+                      "--star-idx": idx,
+                    } as React.CSSProperties
+                  }
                 >
                   {/* Counter-rotation to keep stars oriented gracefully */}
                   <div className="star-orbit-counter relative w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 transition-transform duration-200 hover:scale-125">

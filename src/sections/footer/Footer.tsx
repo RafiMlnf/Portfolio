@@ -2,146 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { motion, useInView } from "motion/react";
 
 /* =========================================================================
    STRICT FONT COMPLIANCE:
    Only EB Garamond (font-serif), Poppins (font-sans), and Arial Narrow (font-narrow).
    No other fonts are allowed.
    ========================================================================= */
-
-// Staggered Flicker-In Entrance Component for Text
-function FlickerInText({
-  text,
-  className = "",
-  delay = 0,
-  as: Component = "span",
-  by = "char",
-}: {
-  text: string;
-  className?: string;
-  delay?: number;
-  as?: "span" | "p" | "h2" | "h3" | "div";
-  by?: "char" | "word";
-}) {
-  const ref = useRef<HTMLElement | null>(null);
-  const isInView = useInView(ref, { once: false, amount: 0.15 });
-
-  if (by === "word") {
-    const words = text.split(" ");
-    return (
-      <Component ref={ref as React.Ref<any>} className={`flicker-container ${className}`}>
-        {words.map((word, wIdx) => {
-          const wordDelay = delay + wIdx * 0.07;
-          return (
-            <span key={wIdx} className="inline-block whitespace-nowrap mr-[0.25em]">
-              <span
-                className={
-                  isInView
-                    ? "footer-flicker-active inline-block"
-                    : "opacity-0 inline-block"
-                }
-                style={isInView ? { animationDelay: `${wordDelay}s` } : undefined}
-              >
-                {word}
-              </span>
-            </span>
-          );
-        })}
-      </Component>
-    );
-  }
-
-  // Character by character flicker
-  const chars = text.split("");
-  return (
-    <Component ref={ref as React.Ref<any>} className={`flicker-container ${className}`}>
-      {chars.map((char, cIdx) => {
-        if (char === " ") {
-          return <span key={cIdx}> </span>;
-        }
-        const charDelay = delay + cIdx * 0.02 + ((cIdx % 4) * 0.01);
-        return (
-          <span
-            key={cIdx}
-            className={
-              isInView
-                ? "footer-flicker-active inline-block relative"
-                : "opacity-0 inline-block relative"
-            }
-            style={
-              isInView
-                ? {
-                    animationDelay: `${charDelay}s`,
-                    animationDuration: "0.65s",
-                  }
-                : undefined
-            }
-          >
-            {char}
-          </span>
-        );
-      })}
-    </Component>
-  );
-}
-
-// Syllable-by-syllable smooth green block highlight wave & slight zoom animation
-const headlineWords = [
-  {
-    word: "Let's",
-    syllables: ["Let's"],
-  },
-  {
-    word: "build",
-    syllables: ["build"],
-  },
-  {
-    word: "something",
-    syllables: ["some", "thing"],
-  },
-  {
-    word: "extraordinary",
-    syllables: ["ex", "traor", "di", "na", "ry"],
-  },
-  {
-    word: "together.",
-    syllables: ["to", "ge", "ther."],
-  },
-];
-
-function SyllableWaveHeadline() {
-  const cycleDuration = 5.2; // durasi 1 putaran penuh gelombang (detik)
-  const stepDelay = 0.28; // jeda waktu antar suku kata (detik)
-  let globalSyllableIndex = 0;
-
-  return (
-    <>
-      {headlineWords.map((item, wIdx) => (
-        <span key={wIdx} className="inline-block whitespace-nowrap mr-[0.28em] last:mr-0">
-          {item.syllables.map((syl, sIdx) => {
-            const delay = globalSyllableIndex * stepDelay;
-            globalSyllableIndex++;
-            return (
-              <span
-                key={sIdx}
-                className="headline-syllable"
-                style={
-                  {
-                    "--syllable-cycle": `${cycleDuration}s`,
-                    "--syllable-delay": `${delay}s`,
-                  } as React.CSSProperties
-                }
-              >
-                {syl}
-              </span>
-            );
-          })}
-        </span>
-      ))}
-    </>
-  );
-}
 
 export default function Footer() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -171,17 +37,11 @@ export default function Footer() {
           <div className="flex flex-col gap-4">
 
             <h2 className="font-serif italic text-4xl sm:text-6xl md:text-7xl font-normal tracking-tight text-neutral-100 dark:text-neutral-100 light:text-neutral-900 leading-[1.08] max-w-3xl">
-              <span className="shaky-retro-text">
-                <SyllableWaveHeadline />
-              </span>
+              Let's build something extraordinary together.
             </h2>
 
             <p className="font-narrow text-sm sm:text-base text-neutral-400 dark:text-neutral-400 light:text-neutral-600 max-w-xl mt-2 leading-relaxed">
-              <FlickerInText
-                text="Have a concept in mind, an engineering problem to solve, or just want to chat about web technology? Feel free to reach out anytime."
-                delay={0.3}
-                by="word"
-              />
+              Have a concept in mind, an engineering problem to solve, or just want to chat about web technology? Feel free to reach out anytime.
             </p>
           </div>
         </div>
@@ -189,7 +49,7 @@ export default function Footer() {
         {/* ── INTERACTIVE COLORED CONTACT & SOCIAL CARDS ─────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 pt-2 pb-14">
           {/* 1. GMAIL (PROMINENT OFFICIAL 4-COLOR) */}
-          <div className="group relative rounded-2xl p-5 border border-neutral-800/90 dark:border-neutral-800/90 light:border-neutral-200 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-white backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-red-500/50 hover:shadow-[0_10px_30px_rgba(234,67,53,0.12)]">
+          <div className="group relative rounded-2xl p-5 border border-neutral-800/90 dark:border-neutral-800/90 light:border-neutral-200 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-white transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-red-500/50 hover:shadow-[0_10px_30px_rgba(234,67,53,0.12)]">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 {/* Official Google Mail 4-Color Icon */}
@@ -264,7 +124,7 @@ export default function Footer() {
             href="https://linkedin.com/in/rafimlnf"
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative rounded-2xl p-5 border border-neutral-800/90 dark:border-neutral-800/90 light:border-neutral-200 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-white backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-[#0A66C2]/60 hover:shadow-[0_10px_30px_rgba(10,102,194,0.15)] flex flex-col justify-between"
+            className="group relative rounded-2xl p-5 border border-neutral-800/90 dark:border-neutral-800/90 light:border-neutral-200 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-white transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-[#0A66C2]/60 hover:shadow-[0_10px_30px_rgba(10,102,194,0.15)] flex flex-col justify-between"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -298,7 +158,7 @@ export default function Footer() {
             href="https://github.com/rafimlnf"
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative rounded-2xl p-5 border border-neutral-800/90 dark:border-neutral-800/90 light:border-neutral-200 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-white backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-purple-500/50 hover:shadow-[0_10px_30px_rgba(168,85,247,0.15)] flex flex-col justify-between"
+            className="group relative rounded-2xl p-5 border border-neutral-800/90 dark:border-neutral-800/90 light:border-neutral-200 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-white transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-purple-500/50 hover:shadow-[0_10px_30px_rgba(168,85,247,0.15)] flex flex-col justify-between"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -344,7 +204,7 @@ export default function Footer() {
             href="https://instagram.com/rafimlnf"
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative rounded-2xl p-5 border border-neutral-800/90 dark:border-neutral-800/90 light:border-neutral-200 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-white backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-[#e1306c]/50 hover:shadow-[0_10px_30px_rgba(225,48,108,0.15)] flex flex-col justify-between"
+            className="group relative rounded-2xl p-5 border border-neutral-800/90 dark:border-neutral-800/90 light:border-neutral-200 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-white transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-[#e1306c]/50 hover:shadow-[0_10px_30px_rgba(225,48,108,0.15)] flex flex-col justify-between"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -386,7 +246,7 @@ export default function Footer() {
           </Link>
 
           {/* 5. DISCORD (OFFICIAL BLURPLE) */}
-          <div className="group relative rounded-2xl p-5 border border-neutral-800/90 dark:border-neutral-800/90 light:border-neutral-200 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-white backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-[#5865F2]/60 hover:shadow-[0_10px_30px_rgba(88,101,242,0.15)] flex flex-col justify-between">
+          <div className="group relative rounded-2xl p-5 border border-neutral-800/90 dark:border-neutral-800/90 light:border-neutral-200 bg-neutral-900/40 dark:bg-neutral-900/40 light:bg-white transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-[#5865F2]/60 hover:shadow-[0_10px_30px_rgba(88,101,242,0.15)] flex flex-col justify-between">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#5865F2]/15 flex items-center justify-center p-2 shadow-inner group-hover:scale-105 transition-transform duration-300">

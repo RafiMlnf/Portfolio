@@ -280,6 +280,73 @@ html.light .shaky-retro-text {
   will-change: transform;
 }
 
+/* Sequential circular star appearance & disappearance */
+@keyframes star-step-fade-cycle {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+    filter: drop-shadow(0 0 2px rgba(0, 150, 255, 0.2));
+  }
+  6% {
+    opacity: 0.95;
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 10px rgba(0, 180, 255, 0.85));
+  }
+  14% {
+    opacity: 1;
+    transform: scale(1);
+    filter: drop-shadow(0 0 6px rgba(0, 140, 255, 0.6));
+  }
+  26% {
+    opacity: 0.95;
+    transform: scale(1);
+    filter: drop-shadow(0 0 5px rgba(0, 120, 255, 0.5));
+  }
+  38% {
+    opacity: 0;
+    transform: scale(0.4);
+    filter: drop-shadow(0 0 0px transparent);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+    filter: drop-shadow(0 0 0px transparent);
+  }
+}
+
+.star-sequential-item {
+  animation: star-step-fade-cycle 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: calc(var(--star-idx, 0) * 0.45s);
+  will-change: transform, opacity;
+}
+
+/* Subtle Screen Edge Ambient Glow outside the central frame */
+.ambient-screen-glow {
+  position: absolute;
+  inset: -8%;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(
+    ellipse 65% 55% at 50% 50%,
+    transparent 42%,
+    rgba(30, 80, 160, 0.08) 65%,
+    rgba(14, 214, 0, 0.03) 85%,
+    rgba(20, 50, 120, 0.1) 100%
+  );
+  filter: blur(40px);
+}
+
+html.light .ambient-screen-glow {
+  background: radial-gradient(
+    ellipse 65% 55% at 50% 50%,
+    transparent 44%,
+    rgba(70, 130, 220, 0.06) 68%,
+    rgba(14, 214, 0, 0.02) 85%,
+    rgba(50, 100, 200, 0.08) 100%
+  );
+  filter: blur(40px);
+}
+
 /* Star Periodic Appearance with Invert Flash & Left-to-Right Wave */
 .star-flicker-item {
   opacity: 0;
@@ -568,6 +635,11 @@ html.light .shaky-retro-text {
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
+
+html.light .hero-side-bulge {
+  background: linear-gradient(90deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 45%, rgba(255, 255, 255, 0.3) 100%);
+}
+
 .hero-side-bulge.left {
   left: 0;
   -webkit-mask-image: radial-gradient(ellipse 90px 70% at 100% 50%, transparent 97%, #000 100%);
@@ -864,4 +936,30 @@ html.light .shaky-retro-text {
   86%  { backdrop-filter: invert(1) contrast(130%); }
   93%  { backdrop-filter: invert(0.35); }
   100% { backdrop-filter: invert(0); }
+}
+
+/* -- Performance: pause infinite animations & skip rendering of offscreen sections -- */
+.footer-perf[data-offscreen="true"] *,
+.footer-perf[data-offscreen="true"] {
+  animation-play-state: paused !important;
+}
+.footer-perf {
+  contain: layout paint;
+}
+#projects {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+#experiences {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
+/* Hero tertutup: hentikan semua animasi CSS & sembunyikan dari render */
+#hero[data-offscreen="true"],
+#hero[data-offscreen="true"] * {
+  animation-play-state: paused !important;
+}
+#hero[data-offscreen="true"] {
+  visibility: hidden;
 }

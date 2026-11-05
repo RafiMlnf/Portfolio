@@ -5,6 +5,7 @@ import Experiences from "@/sections/experiences/Experiences";
 import Skills from "@/sections/skills/Skills";
 import Projects from "@/sections/projects/Projects";
 import Footer from "@/sections/footer/Footer";
+import ScribbleLine from "@/components/ScribbleLine";
 
 export default function Home() {
   return (
@@ -17,14 +18,19 @@ export default function Home() {
         {/* Layered Content Sheet: Container yang meluncur naik dari bawah menutupi Hero & Header */}
         <div className="relative z-20 w-full bg-[var(--background)] border-t border-neutral-800/80 overflow-hidden transition-colors duration-300">
           <Profile />
-          <Experiences />
-          <Skills />
-          <Projects />
+
+          {/* Area Continuous Mulai dari Experience hingga Paling Bawah (Footer) */}
+          <div className="relative w-full">
+            {/* Animasi Garis Scribble Meliuk-liuk Kontinu di Sisi Kiri */}
+            <ScribbleLine />
+
+            <Experiences />
+            <Skills />
+            <Projects />
+            <Footer />
+          </div>
         </div>
       </main>
-      <div className="relative z-20 bg-[var(--background)]">
-        <Footer />
-      </div>
     </>
   );
 }
